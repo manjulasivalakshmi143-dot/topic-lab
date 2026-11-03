@@ -188,6 +188,12 @@ html.phone .list{max-height:none}
           <span class="muted" style="font-size:14px">On a phone this opens the camera or gallery.</span></div>
         <div class="thumbs" id="thumbs" style="margin-top:8px"></div>
       </div>
+      <div>
+        <div class="lbl" style="margin-bottom:6px">Audio to text (AIR Spotlight, news bulletin, lecture)</div>
+        <div class="drop" id="aDrop"><span>Choose a downloaded audio file, or record it playing on a radio or another phone</span>
+          <div class="row" style="justify-content:center"><label class="btn ghost">Choose audio file<input type="file" id="aAudio" accept="audio/*,video/mp4,.mp3,.m4a,.aac,.wav,.ogg,.opus,.amr" hidden></label><button class="btn ghost mic" type="button" id="aRec">⏺ Record</button></div>
+          <span class="muted" id="aAudMsg" style="font-size:14px">The words are written into the text box above. Needs internet and your Gemini key.</span></div>
+      </div>
       <label class="f">Newspaper or web link (optional)<input type="url" id="aLink" placeholder="https://…"></label>
       <p class="muted" style="margin:0;font-size:14px">A link is saved for reference. For the analysis, also paste the article's text above, because a link alone may not be readable.</p>
       <div class="row"><button class="btn pri" type="button" id="aSave">Save and analyse</button><button class="btn ghost" type="button" id="aLater">Save for later</button><span id="aMsg" class="muted"></span></div>
@@ -404,6 +410,59 @@ async function saveNew(andRun){
   show('library');renderLesson();toast('Saved on this phone');
   if(andRun&&settings.provider!=='chat'&&navigator.onLine)analyse(l);
 }
+/* ---------- audio to text (Gemini) ---------- */
+function b64(buf){let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+async function toWav16k(blob){/* recordings → small mono 16 kHz WAV that Gemini reads well */
+  const ac=new (window.AudioContext||window.webkitAudioContext)();const ab=await ac.decodeAudioData(await blob.arrayBuffer());ac.close&&ac.close();
+  const rate=16000,n=Math.ceil(ab.duration*rate),oc=new OfflineAudioContext(1,n,rate),src=oc.createBufferSource();src.buffer=ab;src.connect(oc.destination);src.start();
+  const d=(await oc.startRendering()).getChannelData(0),out=new DataView(new ArrayBuffer(44+d.length*2));
+  const w=(o,t)=>{for(let i=0;i<t.length;i++)out.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');out.setUint32(4,36+d.length*2,true);w(8,'WAVEfmt ');out.setUint32(16,16,true);out.setUint16(20,1,true);out.setUint16(22,1,true);out.setUint32(24,rate,true);out.setUint32(28,rate*2,true);out.setUint16(32,2,true);out.setUint16(34,16,true);w(36,'data');out.setUint32(40,d.length*2,true);
+  for(let i=0;i<d.length;i++){const v=Math.max(-1,Math.min(1,d[i]));out.setInt16(44+i*2,v<0?v*0x8000:v*0x7fff,true)}
+  return new Blob([out],{type:'audio/wav'});
+}
+function audMime(f){const t=(f.type||'').toLowerCase(),n=(f.name||'').toLowerCase();
+  if(/mpeg|mp3/.test(t)||n.endsWith('.mp3'))return'audio/mp3';if(/wav/.test(t)||n.endsWith('.wav'))return'audio/wav';if(/aac|m4a|mp4/.test(t)||/\.(m4a|aac|mp4)$/.test(n))return'audio/aac';
+  if(/ogg|opus/.test(t)||/\.(ogg|opus)$/.test(n))return'audio/ogg';if(/flac/.test(t))return'audio/flac';return'';}
+async function uploadGemini(blob,mime,onMsg){
+  const st=await fetch('https://generativelanguage.googleapis.com/upload/v1beta/files',{method:'POST',headers:{'x-goog-api-key':settings.gkey,'X-Goog-Upload-Protocol':'resumable','X-Goog-Upload-Command':'start','X-Goog-Upload-Header-Content-Length':String(blob.size),'X-Goog-Upload-Header-Content-Type':mime,'content-type':'application/json'},body:JSON.stringify({file:{display_name:'topic-lab-audio'}})});
+  const url=st.headers.get('x-goog-upload-url');if(!st.ok||!url)throw new Error('Could not upload the audio. Try a smaller file (under 14 MB).');
+  onMsg('Uploading audio…');
+  const up=await fetch(url,{method:'POST',headers:{'X-Goog-Upload-Offset':'0','X-Goog-Upload-Command':'upload, finalize'},body:blob});const j=await up.json();if(!up.ok)throw new Error((j.error&&j.error.message)||'Upload failed');
+  let f=j.file;for(let i=0;i<40&&f.state==='PROCESSING';i++){onMsg('Google is preparing the audio…');await sleep(3000);f=await (await fetch('https://generativelanguage.googleapis.com/v1beta/'+f.name,{headers:{'x-goog-api-key':settings.gkey}})).json()}
+  if(f.state==='FAILED')throw new Error('Google could not read this audio file');
+  return{file_data:{mime_type:mime,file_uri:f.uri}};
+}
+async function transcribe(blob,name){
+  const m=$('#aAudMsg'),say=t=>m.innerHTML='<span class="spin"></span> '+esc(t);
+  if(!settings.gkey){toast('Add your free Gemini key in Settings first');show('settings');return}
+  if(!navigator.onLine){toast('Audio to text needs internet');return}
+  let mime=audMime(blob);
+  try{
+    if(!mime){say('Converting the recording…');blob=await toWav16k(blob);mime='audio/wav'}
+    let part;
+    if(blob.size<=14*1024*1024){say('Reading audio…');part={inline_data:{mime_type:mime,data:b64(await blob.arrayBuffer())}}}
+    else part=await uploadGemini(blob,mime,say);
+    const t0=Date.now();let mdl='';const iv=setInterval(()=>say('Writing the words'+(mdl?' with '+mdl:'')+'… '+Math.round((Date.now()-t0)/1000)+' s'),1000);
+    let txt;try{txt=await geminiGenerate([part,{text:'Transcribe this audio word for word. It is usually an Indian news or current affairs programme such as All India Radio Spotlight, in English, Hindi or Telugu. Write the transcript in the language spoken. Use proper sentences and paragraphs, mark a new speaker as "Speaker 1:", "Speaker 2:" or by name if said. Spell Indian names, schemes, places and organisations correctly. Do not summarise and do not add anything that was not said. Reply with only the transcript text.'}],30000,0.1,m2=>{mdl=m2},{plain:true,timeout:300000})}finally{clearInterval(iv)}
+    const ta=$('#aText');ta.value=(ta.value.trim()?ta.value.trim()+'\n\n':'')+txt.trim();ta.dispatchEvent(new Event('input'));
+    if(!$('#aTitle').value.trim())$('#aTitle').value=(/spotlight/i.test(name||'')?'AIR Spotlight':'Audio notes')+' — '+new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    const words=txt.trim().split(/\s+/).length;m.textContent=`Done: about ${words} words added to the text box. Check it, then tap Save and analyse.`;toast('Audio turned into text');
+  }catch(e){m.textContent='Could not turn the audio into text: '+e.message}
+}
+$('#aAudio').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)transcribe(f,f.name)};
+let rec=null;
+$('#aRec').onclick=async()=>{
+  const b=$('#aRec');
+  if(rec&&rec.state==='recording'){rec.stop();return}
+  if(!window.MediaRecorder||!navigator.mediaDevices){toast('Recording is not supported on this browser');return}
+  try{const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true}});const chunks=[];rec=new MediaRecorder(stream);
+    const t0=Date.now(),iv=setInterval(()=>{const s=Math.round((Date.now()-t0)/1000);b.textContent='⏹ Stop '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},1000);
+    rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    rec.onstop=()=>{clearInterval(iv);stream.getTracks().forEach(t=>t.stop());b.classList.remove('on');b.textContent='⏺ Record';transcribe(new Blob(chunks,{type:rec.mimeType}),'recording')};
+    rec.start(1000);b.classList.add('on');b.textContent='⏹ Stop 0:00';$('#aAudMsg').textContent='Recording… keep the phone close to the speaker. Tap Stop when it ends.';
+  }catch(e){toast('Microphone permission is needed to record')}
+};
 $('#aSave').onclick=()=>saveNew(true);$('#aLater').onclick=()=>saveNew(false);
 
 /* ---------- analysis ---------- */
@@ -465,12 +524,12 @@ async function geminiGenerate(parts,maxTokens,temp,onStatus,opts){
     for(const model of models){
       onStatus&&onStatus(model.replace('models/',''),round);
       let r,j;
-      const ctl=new AbortController();const tmr=setTimeout(()=>ctl.abort(),100000);
-      try{r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{signal:ctl.signal,method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify(Object.assign({contents:[{role:'user',parts}],generationConfig:Object.assign(opts.search?{}:{responseMimeType:'application/json'},{maxOutputTokens:maxTokens,temperature:temp},noThink.has(model)?{}:{thinkingConfig:thinkFor(model)})},opts.search?{tools:[{google_search:{}}]}:{}))});j=await r.json()}
+      const ctl=new AbortController();const tmr=setTimeout(()=>ctl.abort(),opts.timeout||100000);
+      try{r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{signal:ctl.signal,method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify(Object.assign({contents:[{role:'user',parts}],generationConfig:Object.assign(opts.search||opts.plain?{}:{responseMimeType:'application/json'},{maxOutputTokens:maxTokens,temperature:temp},noThink.has(model)?{}:{thinkingConfig:thinkFor(model)})},opts.search?{tools:[{google_search:{}}]}:{}))});j=await r.json()}
       catch(e){clearTimeout(tmr);lastErr=e.name==='AbortError'?model.replace('models/','')+' took too long':'Network problem. Check the internet.';continue}
       clearTimeout(tmr);
       if(r.ok){const c0=(j.candidates||[])[0]||{content:{parts:[]}};const t=c0.content;const txt=((t&&t.parts)||[]).map(p=>p.text||'').join('');
-        if(txt.trim()){if(!opts.search)return txt;const gm=c0.groundingMetadata||{};return{txt,sources:(gm.groundingChunks||[]).map(g=>g.web).filter(Boolean).map(w=>({title:w.title||w.uri,uri:w.uri}))}}
+        if(txt.trim()){if(!opts.search)return txt;/*search*/const gm=c0.groundingMetadata||{};return{txt,sources:(gm.groundingChunks||[]).map(g=>g.web).filter(Boolean).map(w=>({title:w.title||w.uri,uri:w.uri}))}}
         lastErr='Empty answer';continue}
       lastErr=(j.error&&j.error.message)||('Request failed ('+r.status+')');
       if(r.status===400&&/think/i.test(lastErr)&&!noThink.has(model)){noThink.add(model);continue}
