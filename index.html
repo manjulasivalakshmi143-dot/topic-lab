@@ -134,12 +134,24 @@ td.w{font-weight:700;color:var(--green)}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 code{background:var(--bg);padding:1px 5px;border-radius:4px}
+/* desktop mode: wider page, saved list on the left, wide readable tables */
+.secs{display:grid;gap:14px}
+.vbtn{background:transparent;color:inherit;cursor:pointer}
+html.desk .topin,html.desk .wrap{max-width:1500px}
+html.desk .lib{grid-template-columns:340px minmax(0,1fr)!important}
+html.desk .list{max-height:calc(100vh - 220px)!important}
+html.desk .tabs{flex-wrap:nowrap}
+html.desk #v-settings{max-width:1100px!important}
+@media (min-width:1200px){html:not(.phone) .topin,html:not(.phone) .wrap{max-width:1500px}}
+html.phone .lib{grid-template-columns:1fr}
+html.phone .list{max-height:none}
 </style>
 
 <header class="top"><div class="topin">
   <div class="brand">Topic Lab<small>Group 1 · Group 2 · Civil services</small></div>
   <button class="net" type="button" id="tmBtn" aria-label="Study timer" style="background:transparent;color:inherit;cursor:pointer;font-variant-numeric:tabular-nums">⏱ 00:00</button>
   <span class="net" id="net">Online</span>
+  <button class="net vbtn" type="button" id="vBtn" aria-label="Switch phone or desktop layout">🖥 Desktop</button>
   <nav class="tabs" aria-label="Sections">
     <button class="tab" data-v="library" type="button">Library</button>
     <button class="tab" data-v="add" type="button">Add material</button>
@@ -211,6 +223,11 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px}
       <h2>Reading theme</h2>
       <div class="seg" role="group" aria-label="Theme"><button type="button" data-t="" aria-pressed="true">Phone setting</button><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button><button type="button" data-t="sepia" aria-pressed="false">Sepia (eye care)</button><button type="button" data-t="black" aria-pressed="false">Pure black (saves battery)</button></div>
       <p class="muted" style="margin:0;font-size:14px">Pure black switches off pixels on AMOLED screens during long study sessions.</p>
+    </div>
+    <div class="card stack">
+      <h2>Screen layout</h2>
+      <div class="seg" role="group" aria-label="Layout"><button type="button" data-lay="" aria-pressed="true">Auto</button><button type="button" data-lay="phone" aria-pressed="false">Phone</button><button type="button" data-lay="desk" aria-pressed="false">Desktop</button></div>
+      <p class="muted" style="margin:0;font-size:14px">Desktop shows the saved topics on the left and the tables side by side. On a phone it shows the full page zoomed out, like Chrome's "Desktop site"; pinch to zoom in.</p>
     </div>
     <div class="card stack">
       <h2>Keep your work safe</h2>
@@ -348,7 +365,7 @@ function renderLesson(){
     <div class="row"><button class="btn ok" type="button" id="impR">Make tables from reply</button><span class="muted" id="runMsg"></span></div></div>`;
   }else{
     h+=`<div class="row"><button class="btn pri" type="button" id="prac">Practise this topic</button><button class="btn" type="button" id="docx">Download as Word document</button><button class="btn ghost" type="button" id="redo">Analyse again</button><button class="btn danger" type="button" id="delL">Delete</button></div>`;
-    h+=lessonHTML(l,false);
+    h+='<div class="secs">'+lessonHTML(l,false)+'</div>';
   }
   h+=sec('Original material','Saved on this phone',`${src.link?`<p><a href="${esc(src.link)}" target="_blank" rel="noopener">${esc(src.link)}</a></p>`:''}${src.text?`<div class="orig">${esc(src.text)}</div>`:''}${(src.images||[]).length?`<div class="thumbs" style="margin-top:8px">${src.images.map(i=>`<img src="${i}" alt="Saved page photo">`).join('')}</div>`:''}`);
   if(l.status!=='done')h+=`<div class="row"><button class="btn danger" type="button" id="delL">Delete</button></div>`;
@@ -621,6 +638,13 @@ document.addEventListener('click',e=>{if(!$('#tmPop').hidden&&!e.target.closest(
 $('#tmGo').onclick=()=>{if(TM.run)tmStop();else{TM.run=true;TM.start=Date.now()}tmSave();tmPaint()};
 $('#tmReset').onclick=()=>{tmStop();TM.acc=0;tmSave();tmPaint()};
 setInterval(()=>{if(TM.run)tmPaint()},1000);
+/* ---------- layout (auto / phone / desktop) ---------- */
+function applyLayout(v){const r=document.documentElement;r.classList.toggle('desk',v==='desk');r.classList.toggle('phone',v==='phone');
+  const vp=document.querySelector('meta[name=viewport]');vp.setAttribute('content',v==='desk'&&screen.width<1100?'width=1280,viewport-fit=cover':'width=device-width,initial-scale=1,viewport-fit=cover');
+  $$('[data-lay]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lay===(v||'')));const vb=$('#vBtn');if(vb)vb.textContent=v==='desk'?'📱 Phone':'🖥 Desktop'}
+async function setLayout(v){settings.layout=v;applyLayout(v);await DB.set('settings',settings)}
+$$('[data-lay]').forEach(b=>b.onclick=()=>setLayout(b.dataset.lay));
+$('#vBtn').onclick=()=>setLayout(settings.layout==='desk'?'phone':'desk');
 /* ---------- theme ---------- */
 function applyTheme(t){if(t)document.documentElement.setAttribute('data-theme',t);else document.documentElement.removeAttribute('data-theme');$$('[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===(t||'')))}
 $$('[data-t]').forEach(b=>b.onclick=async()=>{settings.theme=b.dataset.t;applyTheme(settings.theme);await DB.set('settings',settings)});
@@ -646,7 +670,7 @@ $('#rs').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)re
 (async function(){
   await DB.open();
   try{if(navigator.storage&&navigator.storage.persist){const p=await navigator.storage.persist();$('#persist').textContent=p?'This phone has agreed to keep your data permanently.':'The browser may clear data if storage runs low, so keep regular backups.'}}catch(e){}
-  const s=await DB.get('settings');if(s)settings=Object.assign(settings,s);if(s&&s.mode&&!s.provider)settings.provider=s.mode==='chat'?'chat':'claude';$('#sKey').value=settings.key||'';$('#sModel').value=settings.model;$('#gKey').value=settings.gkey||'';if(settings.gmodel)$('#gModel').innerHTML+=`<option value="${esc(settings.gmodel)}" selected>${esc(settings.gmodel.replace('models/',''))}</option>`;paintMode();applyTheme(settings.theme||'');
+  const s=await DB.get('settings');if(s)settings=Object.assign(settings,s);if(s&&s.mode&&!s.provider)settings.provider=s.mode==='chat'?'chat':'claude';$('#sKey').value=settings.key||'';$('#sModel').value=settings.model;$('#gKey').value=settings.gkey||'';if(settings.gmodel)$('#gModel').innerHTML+=`<option value="${esc(settings.gmodel)}" selected>${esc(settings.gmodel.replace('models/',''))}</option>`;paintMode();applyTheme(settings.theme||'');applyLayout(settings.layout||'');
   const tm=await DB.get('timer');if(tm)Object.assign(TM,tm);tmPaint();
   lessons=await DB.all();
   if(!lessons.length&&!(await DB.get('sampleRemoved'))){lessons=[SAMPLE];await DB.put(SAMPLE)}
