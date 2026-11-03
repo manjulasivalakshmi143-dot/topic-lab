@@ -155,6 +155,7 @@ html.phone .list{max-height:none}
   <nav class="tabs" aria-label="Sections">
     <button class="tab" data-v="library" type="button">Library</button>
     <button class="tab" data-v="add" type="button">Add material</button>
+    <button class="tab" data-v="economy" type="button">Economy</button>
     <button class="tab" data-v="practice" type="button">Practice</button>
     <button class="tab" data-v="settings" type="button">Settings</button>
   </nav>
@@ -195,6 +196,13 @@ html.phone .list{max-height:none}
 
   <!-- PRACTICE -->
   <section id="v-practice" hidden class="stack"></section>
+  <!-- ECONOMY -->
+  <section id="v-economy" hidden class="stack">
+    <div class="row"><div style="margin-right:auto"><h1>Indian economy, latest</h1><div class="muted" id="ecWhen">Not updated yet</div></div>
+      <button class="btn pri" type="button" id="ecGo">Update now</button></div>
+    <p class="muted" id="ecMsg" style="margin:0">Uses your Gemini key with Google Search to collect the newest RBI, CBDT, CBIC, GDP, inflation, jobs and Budget figures. Everything is saved on this phone, so you can read it offline. It updates by itself once a day when the app opens online.</p>
+    <div id="ecBox" class="stack"></div>
+  </section>
 
   <!-- SETTINGS -->
   <section id="v-settings" hidden class="stack" style="max-width:820px">
@@ -317,7 +325,7 @@ function paintNet(){const on=navigator.onLine;const n=$('#net');n.textContent=on
 addEventListener('online',paintNet);addEventListener('offline',paintNet);paintNet();
 
 /* ---------- views ---------- */
-function show(v){$$('main>section').forEach(s=>s.hidden=s.id!=='v-'+v);$$('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.v===v?'page':'false'));if(v==='practice')renderPractice();if(v==='library')renderList();scrollTo(0,0)}
+function show(v){$$('main>section').forEach(s=>s.hidden=s.id!=='v-'+v);$$('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.v===v?'page':'false'));if(v==='practice')renderPractice();if(v==='economy')ecRender();if(v==='library')renderList();scrollTo(0,0)}
 $$('.tab').forEach(t=>t.onclick=()=>show(t.dataset.v));$('#goAdd').onclick=()=>show('add');
 
 /* ---------- library ---------- */
@@ -450,17 +458,20 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const noThink=new Set();
 function thinkFor(model){const m=model.match(/gemini-(\d+(?:\.\d+)?)/);const v=m?parseFloat(m[1]):0;return v>=3?{thinkingLevel:'low'}:{thinkingBudget:0}}
 /* Tries each free Flash model in turn; on "busy" or rate-limit errors waits and moves to the next one. */
-async function geminiGenerate(parts,maxTokens,temp,onStatus){
+async function geminiGenerate(parts,maxTokens,temp,onStatus,opts){
+  opts=opts||{};
   const models=(await geminiModels()).slice(0,5);let lastErr='';
   for(let round=0;round<2;round++){
     for(const model of models){
       onStatus&&onStatus(model.replace('models/',''),round);
       let r,j;
       const ctl=new AbortController();const tmr=setTimeout(()=>ctl.abort(),100000);
-      try{r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{signal:ctl.signal,method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:Object.assign({responseMimeType:'application/json',maxOutputTokens:maxTokens,temperature:temp},noThink.has(model)?{}:{thinkingConfig:thinkFor(model)})})});j=await r.json()}
+      try{r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{signal:ctl.signal,method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify(Object.assign({contents:[{role:'user',parts}],generationConfig:Object.assign(opts.search?{}:{responseMimeType:'application/json'},{maxOutputTokens:maxTokens,temperature:temp},noThink.has(model)?{}:{thinkingConfig:thinkFor(model)})},opts.search?{tools:[{google_search:{}}]}:{}))});j=await r.json()}
       catch(e){clearTimeout(tmr);lastErr=e.name==='AbortError'?model.replace('models/','')+' took too long':'Network problem. Check the internet.';continue}
       clearTimeout(tmr);
-      if(r.ok){const t=((j.candidates||[])[0]||{content:{parts:[]}}).content;const txt=((t&&t.parts)||[]).map(p=>p.text||'').join('');if(txt.trim())return txt;lastErr='Empty answer';continue}
+      if(r.ok){const c0=(j.candidates||[])[0]||{content:{parts:[]}};const t=c0.content;const txt=((t&&t.parts)||[]).map(p=>p.text||'').join('');
+        if(txt.trim()){if(!opts.search)return txt;const gm=c0.groundingMetadata||{};return{txt,sources:(gm.groundingChunks||[]).map(g=>g.web).filter(Boolean).map(w=>({title:w.title||w.uri,uri:w.uri}))}}
+        lastErr='Empty answer';continue}
       lastErr=(j.error&&j.error.message)||('Request failed ('+r.status+')');
       if(r.status===400&&/think/i.test(lastErr)&&!noThink.has(model)){noThink.add(model);continue}
       const busy=r.status===503||r.status===429||r.status===500||/high demand|overload|unavailable|quota|rate|exhausted/i.test(lastErr);
@@ -638,6 +649,62 @@ document.addEventListener('click',e=>{if(!$('#tmPop').hidden&&!e.target.closest(
 $('#tmGo').onclick=()=>{if(TM.run)tmStop();else{TM.run=true;TM.start=Date.now()}tmSave();tmPaint()};
 $('#tmReset').onclick=()=>{tmStop();TM.acc=0;tmSave();tmPaint()};
 setInterval(()=>{if(TM.run)tmPaint()},1000);
+/* ---------- economy: latest official data via Gemini + Google Search ---------- */
+const EC_GROUPS=[
+ {id:'rbi',name:'RBI and monetary policy',ask:'Reserve Bank of India: latest MPC (Monetary Policy Committee) decision with date; policy repo rate, Standing Deposit Facility rate, Marginal Standing Facility rate, Bank Rate, CRR, SLR; policy stance; RBI GDP growth and CPI inflation projections for the current financial year; date of next MPC meeting; latest forex reserves (with week date); rupee per US dollar; other key RBI decisions or circulars from the last 2 months.'},
+ {id:'macro',name:'GDP, inflation and jobs',ask:'India: latest quarterly real GDP growth (quarter and release date, NSO/MoSPI), latest annual GDP estimate for the current or last financial year, GVA growth, nominal GDP size; latest CPI retail inflation (month), food inflation (CFPI), core inflation if reported, latest WPI inflation (month); latest IIP industrial growth (month); latest PLFS unemployment rate (monthly and quarterly, urban/rural/overall), labour force participation rate, worker population ratio; latest trade deficit and exports figures; current account deficit (% of GDP).'},
+ {id:'budget',name:'Union Budget and fiscal',ask:'India Union Budget (the latest one presented): date, finance minister, total expenditure, capital expenditure, fiscal deficit target (% of GDP) and revenue deficit, borrowing; fiscal deficit target for next year; key tax changes and major scheme allocations; latest CGA data on fiscal deficit achieved so far this year; any new Finance Commission developments; latest Economic Survey headline numbers.'},
+ {id:'tax',name:'CBDT and CBIC (taxes, GST)',ask:'India CBDT: latest net and gross direct tax collections (date, growth %), income tax slabs under the new tax regime currently in force, ITR filing numbers and deadlines, recent CBDT circulars or notifications (last 2 months), Income-tax Act 2025 status. India CBIC: latest monthly gross GST collection (month, amount, growth), latest GST Council meeting (number, date, key decisions, current rate structure), customs or other CBIC changes in the last 2 months.'}
+];
+function ecPrompt(g,today){return `Today is ${today}. Use Google Search and prefer official sources (rbi.org.in, mospi.gov.in, pib.gov.in, incometaxindia.gov.in, cbic.gov.in, indiabudget.gov.in, finmin.nic.in). Find the very latest released figures for: ${g.ask}
+Only give numbers you found in search results. Never guess; if a figure is not found, leave it out.
+Reply with ONLY a JSON object, no other text, in this shape:
+{"items":[{"name":"short indicator name","value":"figure with unit","period":"period it refers to","released":"release date","source":"RBI / NSO / CBDT etc","change":"change versus previous figure, if known","exam":"one line on why it matters for Group 1/2 and civil services exams"}],
+ "updates":[{"title":"recent decision or announcement","date":"date","detail":"one or two plain sentences"}],
+ "terms":[{"term":"key term","meaning":"simple meaning"}]}
+Give 6 to 14 items, up to 5 updates and up to 5 terms. Plain simple English.`}
+function ecParse(t){const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<0)throw new Error('Could not read the reply');return JSON.parse(t.slice(a,b+1))}
+let EC=null,ecBusy=false;
+function ecRender(){
+  const box=$('#ecBox');if(!box)return;
+  if(!EC||!EC.groups){box.innerHTML=`<div class="empty">${settings.gkey?'Tap Update now to collect the latest economy data.':'Add your free Gemini key in Settings, then tap Update now.'}</div>`;$('#ecWhen').textContent='Not updated yet';return}
+  $('#ecWhen').textContent='Last updated '+new Date(EC.at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})+(navigator.onLine?'':' · reading offline');
+  box.innerHTML=EC_GROUPS.map(g=>{const d=EC.groups[g.id];if(!d)return sec(g.name,'Not collected yet','<p class="muted" style="margin:0">Tap Update now to fetch this part.</p>');
+    let h=table(['Indicator','Latest','Period','Released','Change','Source'],d.items||[],['name','value','period','released','change','source']);
+    const ex=(d.items||[]).filter(i=>i.exam);if(ex.length)h+=`<div class="hint" style="margin-top:10px"><b>Exam angle</b><ol>${ex.map(i=>`<li><b>${esc(i.name)}:</b> ${esc(i.exam)}</li>`).join('')}</ol></div>`;
+    if((d.updates||[]).length)h+=`<h3 style="margin:14px 0 6px">Recent decisions</h3>`+table(['Update','Date','Details'],d.updates,['title','date','detail']);
+    if((d.terms||[]).length)h+=`<h3 style="margin:14px 0 6px">Key terms</h3>`+table(['Term','Meaning'],d.terms,['term','meaning']);
+    if((d.sources||[]).length)h+=`<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Sources (${d.sources.length})</summary><ul style="margin:6px 0 0;padding-left:1.2em">${d.sources.map(x=>`<li><a href="${esc(x.uri)}" target="_blank" rel="noopener">${esc(x.title)}</a></li>`).join('')}</ul></details>`;
+    h+=`<div class="row" style="margin-top:12px"><button class="btn ghost" type="button" data-ecstudy="${g.id}">Make study tables and practice from this</button></div>`;
+    return sec(g.name,'Checked '+new Date(d.at).toLocaleDateString('en-IN',{day:'numeric',month:'short'}),h)}).join('')+
+    `<p class="muted" style="font-size:14px;margin:0">Figures are collected automatically from web search. Before quoting a number in an exam answer, check it on the official site in Sources.</p>`;
+  $$('[data-ecstudy]').forEach(b=>b.onclick=()=>ecStudy(b.dataset.ecstudy));
+}
+async function ecUpdate(auto){
+  if(ecBusy)return;const msg=$('#ecMsg');
+  if(!settings.gkey){if(!auto){toast('Add your free Gemini key in Settings first');show('settings')}return}
+  if(!navigator.onLine){if(!auto)toast('You are offline. Showing the saved data.');return}
+  ecBusy=true;$('#ecGo').disabled=true;let ok=0,err='';
+  const today=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  EC=EC||{groups:{}};
+  for(const g of EC_GROUPS){
+    msg.innerHTML=`<span class="spin"></span> Searching: ${esc(g.name)}…`;
+    try{const r=await geminiGenerate([{text:ecPrompt(g,today)}],6000,0.2,null,{search:true});const d=ecParse(r.txt);d.sources=r.sources;d.at=Date.now();
+      const old=EC.groups[g.id];if(old)(EC.prev=EC.prev||{})[g.id]=old;EC.groups[g.id]=d;ok++;EC.at=Date.now();await DB.set('econ',EC);ecRender()}
+    catch(e){err=e.message}
+  }
+  ecBusy=false;$('#ecGo').disabled=false;
+  msg.textContent=ok===EC_GROUPS.length?'Updated. Saved on this phone for offline reading.':ok?`Updated ${ok} of ${EC_GROUPS.length} parts. ${err}`:'Could not update: '+err;
+  if(ok&&!auto)toast('Economy data updated');
+}
+async function ecStudy(id){
+  const g=EC_GROUPS.find(x=>x.id===id),d=EC.groups[id];
+  const text=[g.name+' — latest data ('+new Date(d.at).toLocaleDateString('en-IN')+')',...(d.items||[]).map(i=>`${i.name}: ${i.value} (${i.period||''}${i.released?', released '+i.released:''}${i.source?', '+i.source:''})${i.change?'. Change: '+i.change:''}`),...(d.updates||[]).map(u=>`${u.title} (${u.date||''}): ${u.detail||''}`),...(d.terms||[]).map(t=>`${t.term}: ${t.meaning}`)].join('\n');
+  const l={id:'t'+Date.now(),created:Date.now(),title:g.name+' — '+new Date().toLocaleDateString('en-IN',{month:'short',year:'numeric'}),subjectHint:'Economics',source:{kind:'mixed',text,link:'',images:[]},status:'pending'};
+  await DB.put(l);lessons.push(l);cur=l;show('library');renderLesson();toast('Added to Library');
+  if(settings.provider!=='chat'&&navigator.onLine)analyse(l);
+}
+$('#ecGo').onclick=()=>ecUpdate(false);
 /* ---------- layout (auto / phone / desktop) ---------- */
 function applyLayout(v){const r=document.documentElement;r.classList.toggle('desk',v==='desk');r.classList.toggle('phone',v==='phone');
   const vp=document.querySelector('meta[name=viewport]');vp.setAttribute('content',v==='desk'&&screen.width<1100?'width=1280,viewport-fit=cover':'width=device-width,initial-scale=1,viewport-fit=cover');
@@ -676,6 +743,8 @@ $('#rs').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)re
   if(!lessons.length&&!(await DB.get('sampleRemoved'))){lessons=[SAMPLE];await DB.put(SAMPLE)}
   cur=lessons.sort((a,b)=>b.created-a.created)[0]||null;
   show('library');renderLesson();
+  EC=await DB.get('econ');ecRender();
+  if(settings.gkey&&navigator.onLine&&(!EC||Date.now()-(EC.at||0)>20*3600*1000))setTimeout(()=>{if(!EC||Date.now()-(EC.at||0)>20*3600*1000)ecUpdate(true)},4000);
   if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude/.test(location.hostname)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 })();
 })();
