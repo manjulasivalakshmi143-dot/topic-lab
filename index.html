@@ -422,7 +422,7 @@ async function geminiModels(){
   const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||'Key check failed');
   const ms=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')&&/flash/i.test(m.name)&&!/(image|tts|audio|live|embedding|exp)/i.test(m.name)).map(m=>m.name);
   const ver=n=>{const m=n.match(/gemini-(\d+(?:\.\d+)?)/);return m?parseFloat(m[1]):0};
-  ms.sort((a,b)=>ver(b)-ver(a)||(/lite/.test(a)-/lite/.test(b))||(/preview/.test(a)-/preview/.test(b)));
+  ms.sort((a,b)=>(/preview/.test(a)-/preview/.test(b))||ver(b)-ver(a)||(/lite/.test(a)-/lite/.test(b)));
   if(!ms.length)throw new Error('No Flash model is available for this key');
   geminiList=settings.gmodel?[settings.gmodel,...ms.filter(m=>m!==settings.gmodel)]:ms;
   return geminiList;
@@ -436,8 +436,10 @@ async function geminiGenerate(parts,maxTokens,temp,onStatus){
     for(const model of models){
       onStatus&&onStatus(model.replace('models/',''),round);
       let r,j;
-      try{r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:maxTokens,temperature:temp}})});j=await r.json()}
-      catch(e){lastErr='Network problem. Check the internet.';continue}
+      const ctl=new AbortController();const tmr=setTimeout(()=>ctl.abort(),100000);
+      try{r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{signal:ctl.signal,method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:maxTokens,temperature:temp}})});j=await r.json()}
+      catch(e){clearTimeout(tmr);lastErr=e.name==='AbortError'?model.replace('models/','')+' took too long':'Network problem. Check the internet.';continue}
+      clearTimeout(tmr);
       if(r.ok){const t=((j.candidates||[])[0]||{content:{parts:[]}}).content;const txt=((t&&t.parts)||[]).map(p=>p.text||'').join('');if(txt.trim())return txt;lastErr='Empty answer';continue}
       lastErr=(j.error&&j.error.message)||('Request failed ('+r.status+')');
       const busy=r.status===503||r.status===429||r.status===500||/high demand|overload|unavailable|quota|rate|exhausted/i.test(lastErr);
@@ -452,7 +454,9 @@ async function callGemini(l){
   const parts=[];
   (l.source.images||[]).forEach(d=>{const m=d.match(/^data:(image\/\w+);base64,(.*)$/);if(m)parts.push({inline_data:{mime_type:m[1],data:m[2]}})});
   parts.push({text:buildPrompt(l)+(l.source.text?'\n\nMATERIAL:\n'+l.source.text:'\n\nThe material is in the attached images.')});
-  return geminiGenerate(parts,16000,0.4,(m,round)=>{const el=document.getElementById('runMsg');if(el)el.innerHTML='<span class="spin"></span> Analysing with '+esc(m)+(round?' (trying again)':'')+'… about a minute'});
+  const t0=Date.now();let cm='',cr=0;const draw=()=>{const el=document.getElementById('runMsg');if(el)el.innerHTML='<span class="spin"></span> Analysing with '+esc(cm)+(cr?' (trying again)':'')+'… '+Math.round((Date.now()-t0)/1000)+' s'};
+  const iv=setInterval(draw,1000);
+  try{return await geminiGenerate(parts,16000,0.4,(m,round)=>{cm=m;cr=round;draw()})}finally{clearInterval(iv)}
 }
 async function callClaude(l){
   const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':settings.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:settings.model,max_tokens:8000,messages:[{role:'user',content:contentFor(l)}]})});
