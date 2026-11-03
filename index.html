@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6b52">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Topic Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Source+Sans+3:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600&display=swap">
+<style>
+/* Layout: a student's study desk — a left rail of saved lessons on tablets (top tabs on phones), the open lesson as a stack of labelled tables, marigold for actions, ink-green for structure */
+:root{
+  --bg:#f4f5f1; --sheet:#ffffff; --ink:#18231f; --muted:#5d6862; --line:#dde2dc;
+  --green:#1f6b52; --green-soft:#e2efe9; --gold:#d9900b; --gold-soft:#fcf0d9; --red:#c0392b; --red-soft:#fbe6e3; --on:#ffffff;
+  --f-head:"Fraunces",Georgia,serif; --f-body:"Source Sans 3","Noto Sans Telugu",system-ui,-apple-system,"Segoe UI",sans-serif; --f-te:"Noto Sans Telugu",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111714; --sheet:#18201c; --ink:#e6ece8; --muted:#a2ada7; --line:#2b3530;
+  --green:#5cc09a; --green-soft:#17312a; --gold:#f2b544; --gold-soft:#3a2c10; --red:#ff8a7a; --red-soft:#3b1b17; --on:#111714; color-scheme:dark}}
+:root[data-theme="sepia"]{
+  --bg:#f3e9d2; --sheet:#fbf4e3; --ink:#3b2f1e; --muted:#7a6a52; --line:#e2d3b3;
+  --green:#5c6b2e; --green-soft:#ebe5c6; --gold:#b9770e; --gold-soft:#f5e2b8; --red:#a8402c; --red-soft:#f4dccf; --on:#fbf4e3; color-scheme:light}
+:root[data-theme="black"]{
+  --bg:#000000; --sheet:#000000; --ink:#e6ece8; --muted:#98a39d; --line:#242a27;
+  --green:#5cc09a; --green-soft:#0e1f19; --gold:#f2b544; --gold-soft:#2a200b; --red:#ff8a7a; --red-soft:#2b1310; --on:#000000; color-scheme:dark}
+:root[data-theme="dark"]{
+  --bg:#111714; --sheet:#18201c; --ink:#e6ece8; --muted:#a2ada7; --line:#2b3530;
+  --green:#5cc09a; --green-soft:#17312a; --gold:#f2b544; --gold-soft:#3a2c10; --red:#ff8a7a; --red-soft:#3b1b17; --on:#111714; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16.5px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--green)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--green);color:var(--on)}
+.topin{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:10px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));flex-wrap:wrap}
+.brand{font-family:var(--f-head);font-weight:800;font-size:22px;letter-spacing:-.01em;margin-right:auto}
+.brand small{font-family:var(--f-body);font-weight:600;font-size:12px;opacity:.8;margin-left:8px;letter-spacing:.04em}
+.net{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid currentColor;border-radius:999px;padding:3px 10px}
+.net.off{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{border:0;background:transparent;color:var(--on);font-weight:700;padding:7px 12px;border-radius:8px;opacity:.85}
+.tab[aria-current="page"]{background:var(--on);color:var(--green);opacity:1}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px}
+h1,h2,h3{font-family:var(--f-head);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(24px,4.5vw,34px);font-weight:800}
+h2{font-size:21px;font-weight:700}
+h3{font-size:17px;font-weight:700}
+.muted{color:var(--muted)}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.btn{border:1.5px solid var(--ink);background:var(--sheet);border-radius:9px;padding:9px 16px;font-weight:700}
+.btn.pri{background:var(--gold);border-color:var(--gold);color:#1b1408}
+.btn.ok{background:var(--green);border-color:var(--green);color:var(--on)}
+.btn.ghost{border-color:var(--line)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.stack{display:grid;gap:14px}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:18px}
+.chip{display:inline-block;font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--green-soft);color:var(--green)}
+.chip.gold{background:var(--gold-soft);color:var(--ink)}
+.chip.red{background:var(--red-soft);color:var(--red)}
+input[type=text],input[type=url],input[type=password],input[type=search],select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:10px 12px}
+textarea{min-height:140px;resize:vertical;line-height:1.5}
+label.f{display:grid;gap:6px;font-weight:600}
+/* library layout */
+.lib{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.lib{grid-template-columns:1fr}}
+.list{display:grid;gap:8px;max-height:calc(100vh - 220px);overflow:auto;padding-right:2px}
+@media (max-width:860px){.list{max-height:none}}
+.item{display:grid;gap:4px;text-align:left;background:var(--sheet);border:1px solid var(--line);border-left:5px solid var(--green);border-radius:10px;padding:10px 12px}
+.item[aria-current="true"]{border-color:var(--green);box-shadow:0 0 0 2px var(--green-soft)}
+.item.pending{border-left-color:var(--gold)}
+.item b{font-size:15.5px;line-height:1.3}
+.item .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.empty{border:1.5px dashed var(--line);border-radius:12px;padding:22px;color:var(--muted);text-align:center}
+/* lesson */
+.lhead{display:grid;gap:8px;margin-bottom:6px}
+.sec{background:var(--sheet);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.sec>h3{background:var(--green-soft);color:var(--green);padding:10px 16px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.sec>h3 span{font-family:var(--f-body);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.sbody{padding:14px 16px}
+.sbody p{margin:0 0 8px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th{text-align:left;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.w{font-weight:700;color:var(--green)}
+.te{font-family:var(--f-te)}
+.orig{max-height:220px;overflow:auto;white-space:pre-wrap;background:var(--bg);border-radius:9px;padding:10px 12px;font-size:15px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs img{width:110px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+/* practice */
+.qcard{border-top:1px dashed var(--line);padding-top:12px;margin-top:12px}
+.qcard:first-child{border-top:0;margin-top:0;padding-top:0}
+.qq{font-weight:700;margin-bottom:8px}
+.opts{display:grid;gap:6px}
+.opt{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:9px 12px}
+.opt:hover:not(:disabled){border-color:var(--green)}
+.opt .k{width:28px;height:28px;border-radius:50%;border:2px solid var(--green);display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--green)}
+.opt.ok{border-color:var(--green);background:var(--green-soft)}.opt.ok .k{background:var(--green);color:var(--on)}
+.opt.no{border-color:var(--red);background:var(--red-soft)}.opt.no .k{background:var(--red);border-color:var(--red);color:var(--on)}
+.fb{margin-top:8px;border-radius:9px;padding:9px 12px;font-size:15px}
+.fb.ok{background:var(--green-soft)}.fb.no{background:var(--red-soft)}
+.hint{background:var(--gold-soft);border-radius:9px;padding:10px 14px}
+.hint ol{margin:4px 0 0;padding-left:1.3em}
+.model{white-space:pre-wrap;background:var(--green-soft);border-radius:9px;padding:12px 14px}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.pick{text-align:left;display:grid;gap:4px;background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:14px}
+.pick:hover{border-color:var(--green)}
+.pick b{font-family:var(--f-head);font-size:18px}
+.seg{display:flex;gap:4px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:4px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:7px 12px;font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--sheet);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.tmpop{position:fixed;top:calc(env(safe-area-inset-top,0px) + 64px);right:max(16px,env(safe-area-inset-right,0px));z-index:40;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);min-width:220px}
+.tmbig{font-family:var(--f-head);font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+.mic.on{background:var(--red);border-color:var(--red);color:var(--on)}
+.score{font-family:var(--f-head);font-size:30px;font-weight:800;color:var(--green)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:50;font-weight:600;max-width:calc(100vw - 32px)}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;display:grid;gap:8px;justify-items:center}
+.drop.on{border-color:var(--gold);background:var(--gold-soft)}
+.spin{display:inline-block;width:16px;height:16px;border:3px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+</style>
+
+<header class="top"><div class="topin">
+  <div class="brand">Topic Lab<small>Group 1 · Group 2 · Civil services</small></div>
+  <button class="net" type="button" id="tmBtn" aria-label="Study timer" style="background:transparent;color:inherit;cursor:pointer;font-variant-numeric:tabular-nums">⏱ 00:00</button>
+  <span class="net" id="net">Online</span>
+  <nav class="tabs" aria-label="Sections">
+    <button class="tab" data-v="library" type="button">Library</button>
+    <button class="tab" data-v="add" type="button">Add material</button>
+    <button class="tab" data-v="practice" type="button">Practice</button>
+    <button class="tab" data-v="settings" type="button">Settings</button>
+  </nav>
+</div></header>
+
+<div class="tmpop" id="tmPop" hidden><div class="lbl">Study timer</div><div class="tmbig" id="tmBig">00:00:00</div><div class="row"><button class="btn pri" type="button" id="tmGo">Start</button><button class="btn ghost" type="button" id="tmReset">Reset</button></div><div class="muted" id="tmToday" style="font-size:14px"></div></div>
+<main class="wrap">
+  <!-- LIBRARY -->
+  <section id="v-library" class="lib">
+    <div class="stack">
+      <div class="row"><h2 style="margin-right:auto">Saved topics</h2><button class="btn pri" type="button" id="goAdd">+ Add</button></div>
+      <input type="search" id="libq" placeholder="Search saved topics" aria-label="Search saved topics">
+      <select id="libsub" aria-label="Filter by subject"><option value="">All subjects</option></select>
+      <div class="list" id="list"></div>
+    </div>
+    <div id="lesson" class="stack"></div>
+  </section>
+
+  <!-- ADD -->
+  <section id="v-add" hidden>
+    <div class="card stack" style="max-width:820px">
+      <div><h1>Add study material</h1><p class="muted" style="margin:6px 0 0">Paste text from a newspaper or journal, add photos or screenshots of a textbook page, or save a link. Everything is stored on this phone.</p></div>
+      <label class="f">Title (optional)<input type="text" id="aTitle" placeholder="e.g. GST collections rise"></label>
+      <label class="f">Subject<select id="aSub"></select></label>
+      <label class="f">Paste the text<textarea id="aText" placeholder="Paste a newspaper paragraph, journal extract or your notes here (English or Telugu)"></textarea></label>
+      <div>
+        <div class="lbl" style="margin-bottom:6px">Photos or screenshots</div>
+        <div class="drop" id="drop"><span>Take a photo of a page, or choose screenshots</span>
+          <label class="btn ghost">Choose images<input type="file" id="aFiles" accept="image/*" multiple hidden></label>
+          <span class="muted" style="font-size:14px">On a phone this opens the camera or gallery.</span></div>
+        <div class="thumbs" id="thumbs" style="margin-top:8px"></div>
+      </div>
+      <label class="f">Newspaper or web link (optional)<input type="url" id="aLink" placeholder="https://…"></label>
+      <p class="muted" style="margin:0;font-size:14px">A link is saved for reference. For the analysis, also paste the article's text above, because a link alone may not be readable.</p>
+      <div class="row"><button class="btn pri" type="button" id="aSave">Save and analyse</button><button class="btn ghost" type="button" id="aLater">Save for later</button><span id="aMsg" class="muted"></span></div>
+    </div>
+  </section>
+
+  <!-- PRACTICE -->
+  <section id="v-practice" hidden class="stack"></section>
+
+  <!-- SETTINGS -->
+  <section id="v-settings" hidden class="stack" style="max-width:820px">
+    <div class="card stack">
+      <h2>How analysis works</h2>
+      <div class="seg" role="group" aria-label="Analysis service"><button type="button" data-p="gemini" aria-pressed="true">Google Gemini (free key)</button><button type="button" data-p="claude" aria-pressed="false">Claude API</button><button type="button" data-p="chat" aria-pressed="false">Copy and paste</button></div>
+      <div data-box="gemini" class="stack">
+        <p style="margin:0">Free for personal use within Google's daily limits. Get a key once:</p>
+        <ol style="margin:0;padding-left:1.3em"><li>Open <b>aistudio.google.com</b> and sign in with your Google account.</li><li>Tap <b>Get API key</b>, then <b>Create API key</b>.</li><li>Copy the key and paste it below.</li></ol>
+        <label class="f">Gemini API key<input type="password" id="gKey" placeholder="AIza…" autocomplete="off"></label>
+        <label class="f">Model<select id="gModel"><option value="">Pick automatically (newest Flash model)</option></select></label>
+        <div class="row"><button class="btn ok" type="button" id="gSave">Save and test key</button><span class="muted" id="gMsg"></span></div>
+        <p class="muted" style="margin:0;font-size:14px">On the free tier Google may use what you send to improve its services, so don't send personal documents such as Aadhaar or bank details.</p>
+      </div>
+      <div data-box="claude" class="stack" hidden>
+        <p class="muted" style="margin:0">Paid per use from <code>console.anthropic.com</code>. The key is stored only on this phone.</p>
+        <label class="f">Claude API key<input type="password" id="sKey" placeholder="sk-ant-…" autocomplete="off"></label>
+        <label class="f">Model<select id="sModel"><option value="claude-sonnet-5-5">Claude Sonnet 5.5 (best balance)</option><option value="claude-haiku-5-5">Claude Haiku 5.5 (cheaper, faster)</option><option value="claude-opus-5-5">Claude Opus 5.5 (most careful)</option></select></label>
+        <div class="row"><button class="btn ok" type="button" id="sSave">Save settings</button><span class="muted" id="sMsg"></span></div>
+      </div>
+      <div data-box="chat" class="stack" hidden>
+        <p style="margin:0">No key needed. For each topic, tap <b>Copy request</b>, paste it into any AI chat app (Gemini, Claude or ChatGPT) and attach the photos, then copy the whole reply and paste it back into the topic. The app turns it into tables.</p>
+      </div>
+    </div>
+    <div class="card stack">
+      <h2>Reading theme</h2>
+      <div class="seg" role="group" aria-label="Theme"><button type="button" data-t="" aria-pressed="true">Phone setting</button><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button><button type="button" data-t="sepia" aria-pressed="false">Sepia (eye care)</button><button type="button" data-t="black" aria-pressed="false">Pure black (saves battery)</button></div>
+      <p class="muted" style="margin:0;font-size:14px">Pure black switches off pixels on AMOLED screens during long study sessions.</p>
+    </div>
+    <div class="card stack">
+      <h2>Keep your work safe</h2>
+      <p class="muted" style="margin:0">Your topics live in this phone's browser storage. Make a backup file every week and keep it in Google Drive or a pen drive. A backup restores everything on a new phone.</p>
+      <div class="row"><button class="btn" type="button" id="bk">Download backup</button><label class="btn ghost">Restore from backup<input type="file" id="rs" accept=".json,application/json" hidden></label><span class="muted" id="bkMsg"></span></div>
+      <p class="muted" id="persist" style="margin:0;font-size:14px"></p>
+    </div>
+    <div class="card stack">
+      <h2>Install on the phone</h2>
+      <p style="margin:0"><b>Android (Chrome):</b> open the app link, tap the ⋮ menu, then <b>Add to Home screen</b> or <b>Install app</b>.<br><b>iPad (Safari):</b> open the link, tap the Share button, then <b>Add to Home Screen</b>.<br>After the first visit it opens without internet.</p>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const SAMPLE={
+id:'sample-monsoon',sample:true,created:Date.now(),title:'Monsoon and Indian agriculture',subjectHint:'Auto',
+source:{kind:'text',link:'',text:"The south-west monsoon brings about three-fourths of India's annual rainfall between June and September. Nearly half of the country's farmland still depends on rain rather than irrigation, so a delayed or weak monsoon can reduce the output of rice, pulses and oilseeds. When crops fail, rural incomes fall, demand for goods in villages slows down and food prices may rise. Regions such as Rayalaseema, which receive low and uncertain rainfall, bear the brunt of such years. To reduce this risk, governments promote drip irrigation, check dams and crop insurance, while farmers are encouraged to grow drought-resistant crops like millets."},
+status:'done',
+a:{
+subject:'Geography',subject2:'Economics',topic:'Monsoon and Indian agriculture',language:'English',
+theme:'Indian farming and the rural economy still depend heavily on the monsoon, and water-saving methods and insurance can reduce that risk.',
+summary:"The south-west monsoon gives India most of its rain, and about half of its farmland depends on it. A weak or late monsoon cuts crop output, lowers village incomes and can push up food prices, hurting dry regions like Rayalaseema the most. Drip irrigation, check dams, crop insurance and millets help reduce the risk.",
+translation:{to:'Telugu',text:"నైరుతి రుతుపవనాలు జూన్ నుండి సెప్టెంబర్ మధ్య భారతదేశ వార్షిక వర్షపాతంలో దాదాపు మూడు వంతులను అందిస్తాయి. దేశంలోని వ్యవసాయ భూమిలో దాదాపు సగం ఇప్పటికీ నీటిపారుదలపై కాకుండా వర్షంపైనే ఆధారపడి ఉంది. అందువల్ల రుతుపవనాలు ఆలస్యమైనా లేదా బలహీనంగా ఉన్నా వరి, పప్పుధాన్యాలు, నూనెగింజల దిగుబడి తగ్గవచ్చు. పంటలు విఫలమైనప్పుడు గ్రామీణ ఆదాయాలు తగ్గుతాయి, గ్రామాల్లో వస్తువులకు డిమాండ్ మందగిస్తుంది, ఆహార ధరలు పెరగవచ్చు. తక్కువ మరియు అనిశ్చిత వర్షపాతం పొందే రాయలసీమ వంటి ప్రాంతాలు ఇటువంటి సంవత్సరాల్లో ఎక్కువగా నష్టపోతాయి. ఈ ప్రమాదాన్ని తగ్గించడానికి ప్రభుత్వాలు బిందు సేద్యం, చెక్ డ్యాములు, పంటల బీమాను ప్రోత్సహిస్తున్నాయి; అలాగే చిరుధాన్యాల వంటి కరువును తట్టుకునే పంటలను పండించాలని రైతులను ప్రోత్సహిస్తున్నాయి."},
+vocabulary:[
+{word:'delayed',meaning:'happening later than expected',telugu:'ఆలస్యమైన',synonyms:'late, postponed',antonyms:'early, timely'},
+{word:'weak',meaning:'lacking strength',telugu:'బలహీనమైన',synonyms:'feeble, faint',antonyms:'strong, vigorous'},
+{word:'output',meaning:'the amount produced',telugu:'దిగుబడి, ఉత్పత్తి',synonyms:'yield, production',antonyms:'input'},
+{word:'reduce',meaning:'make smaller or less',telugu:'తగ్గించు',synonyms:'decrease, lessen',antonyms:'increase, raise'},
+{word:'rural',meaning:'of villages and the countryside',telugu:'గ్రామీణ',synonyms:'rustic, country',antonyms:'urban'},
+{word:'uncertain',meaning:'not sure or not fixed',telugu:'అనిశ్చిత',synonyms:'unpredictable, doubtful',antonyms:'certain, sure'},
+{word:'promote',meaning:'encourage or support',telugu:'ప్రోత్సహించు',synonyms:'encourage, foster',antonyms:'discourage, hinder'},
+{word:'resistant',meaning:'able to withstand',telugu:'తట్టుకునే',synonyms:'tolerant, resilient',antonyms:'vulnerable, susceptible'},
+{word:'risk',meaning:'the chance of loss or harm',telugu:'ప్రమాదం, నష్టభయం',synonyms:'danger, hazard',antonyms:'safety, security'}],
+keyTerms:[
+{term:'South-west monsoon',explanation:'Seasonal winds that bring most of India\'s rain from June to September',telugu:'నైరుతి రుతుపవనాలు'},
+{term:'Rain-fed agriculture',explanation:'Farming that depends only on rainfall, without irrigation',telugu:'వర్షాధార వ్యవసాయం'},
+{term:'Irrigation',explanation:'Supplying water to crops by canals, wells, pumps or pipes',telugu:'నీటిపారుదల'},
+{term:'Drip irrigation',explanation:'Giving water drop by drop at the roots of plants to save water',telugu:'బిందు సేద్యం'},
+{term:'Check dam',explanation:'A small barrier across a stream that stores water and recharges groundwater',telugu:'చెక్ డ్యామ్'},
+{term:'Crop insurance',explanation:'Protection that pays farmers when crops are lost',telugu:'పంటల బీమా'},
+{term:'Millets',explanation:'Small, drought-hardy grains such as jowar, bajra and ragi',telugu:'చిరుధాన్యాలు'}],
+idioms:[
+{phrase:'bear the brunt',meaning:'suffer the worst part of something',telugu:'ఎక్కువ నష్టాన్ని భరించు',example:'Rayalaseema bears the brunt of a weak monsoon.'},
+{phrase:'at the mercy of',meaning:'completely controlled by something',telugu:'...దయపై ఆధారపడి',example:'Rain-fed farmers are at the mercy of the monsoon.'},
+{phrase:'make or break',meaning:'deciding success or failure',telugu:'విజయమో అపజయమో నిర్ణయించే',example:'July rain is make or break for kharif crops.'}],
+questions:[
+{type:'mcq',q:"What share of India's annual rainfall comes from the south-west monsoon?",options:['About one-fourth','About half','About three-fourths','Almost all'],answer:2,explanation:'The passage says about three-fourths, between June and September.'},
+{type:'mcq',q:'Which of these is a drought-resistant crop?',options:['Rice','Sugarcane','Millets','Banana'],answer:2,explanation:'Millets need little water.'},
+{type:'mcq',q:"A synonym of 'uncertain' is",options:['unpredictable','certain','regular','fixed'],answer:0,explanation:'Uncertain = not sure, unpredictable.'},
+{type:'mcq',q:'Which method gives water drop by drop at the roots?',options:['Flood irrigation','Drip irrigation','Canal irrigation','Tank irrigation'],answer:1,explanation:'Drip irrigation saves water.'},
+{type:'short',q:'Explain how a weak monsoon can raise food prices.',answer:'Less rain reduces the output of crops. With less food reaching the market while demand stays the same, prices rise.'},
+{type:'short',q:'Suggest two measures to protect farmers in low-rainfall regions.',answer:'Drip irrigation and check dams to save and store water; crop insurance against losses; growing drought-resistant crops such as millets.'}],
+writing:{task:"Write a paragraph of about 120 words on 'Why India must reduce its dependence on the monsoon'.",
+hints:['Begin with one line on how much rain the monsoon gives.','Explain the effect of a weak monsoon on crops, incomes and prices.','Give two or three solutions from the passage.','End with a hopeful line about water security.'],
+model:"The south-west monsoon gives India about three-fourths of its rain, and nearly half of our farmland still waits for it. This dependence is risky. A delayed or weak monsoon reduces the output of rice and pulses, lowers the income of rural families and can raise food prices across the country. Dry regions like Rayalaseema suffer the most. India can reduce this risk by spreading drip irrigation, building check dams to store rainwater, and giving every farmer crop insurance. Encouraging millets, which need little water, will also help. If water is saved and used wisely, a poor monsoon need not mean a poor year for our farmers."},
+report:{task:'As a ward secretary, write a newspaper report on a farmers\' awareness camp on drip irrigation held in your mandal.',
+format:['Heading','By-line (By ABC, Staff Reporter)','Place and date','What, when, where, who','Main points discussed','Outcome and closing line'],
+hints:['Write in the past tense and third person.','Keep it to about 120–150 words.','Mention the number of farmers and the officials who spoke.'],
+model:"Farmers learn water-saving methods at awareness camp\n\nBy ABC, Staff Reporter\n\nGuntakal, 2 November 2026: An awareness camp on drip irrigation was held at the mandal agriculture office on Saturday. About 150 farmers from nearby villages took part. The Mandal Agricultural Officer explained how drip irrigation can save up to half the water used in flood irrigation and raise yields. Officials described the subsidy available for drip sets and the steps to apply at the ward and village secretariats. Farmers also learnt about crop insurance and the benefits of growing millets in low-rainfall years. The camp ended with a demonstration on a farmer's field, and many farmers registered for subsidy on the spot."}
+}};
+
+</script>
+<script>
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const SUBJECTS=['Auto-detect','Economics','Polity','History','Geography','Physics','Chemistry','Biology','Mathematics','English','Reasoning','Environment','Science & Technology','Current affairs','Telugu','Other'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)};
+
+/* ---------- storage: IndexedDB with in-memory fallback ---------- */
+const DB={db:null,mem:new Map(),
+  async open(){try{this.db=await new Promise((res,rej)=>{const r=indexedDB.open('topiclab',1);r.onupgradeneeded=()=>{r.result.createObjectStore('lessons',{keyPath:'id'});r.result.createObjectStore('kv')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}catch(e){this.db=null}},
+  tx(s,m){return this.db.transaction(s,m).objectStore(s)},
+  req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  async all(){if(!this.db)return[...this.mem.values()];return this.req(this.tx('lessons','readonly').getAll())},
+  async put(l){if(!this.db){this.mem.set(l.id,l);return}return this.req(this.tx('lessons','readwrite').put(l))},
+  async del(id){if(!this.db){this.mem.delete(id);return}return this.req(this.tx('lessons','readwrite').delete(id))},
+  async get(k){try{if(!this.db)return JSON.parse(localStorage.getItem('tl.'+k));return this.req(this.tx('kv','readonly').get(k))}catch(e){return null}},
+  async set(k,v){try{if(!this.db){localStorage.setItem('tl.'+k,JSON.stringify(v));return}return this.req(this.tx('kv','readwrite').put(v,k))}catch(e){}}
+};
+let lessons=[],cur=null,settings={provider:'gemini',gkey:'',gmodel:'',key:'',model:'claude-sonnet-5-5'},pendingImgs=[];
+
+/* ---------- network status ---------- */
+function paintNet(){const on=navigator.onLine;const n=$('#net');n.textContent=on?'Online':'Offline';n.classList.toggle('off',!on)}
+addEventListener('online',paintNet);addEventListener('offline',paintNet);paintNet();
+
+/* ---------- views ---------- */
+function show(v){$$('main>section').forEach(s=>s.hidden=s.id!=='v-'+v);$$('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.v===v?'page':'false'));if(v==='practice')renderPractice();if(v==='library')renderList();scrollTo(0,0)}
+$$('.tab').forEach(t=>t.onclick=()=>show(t.dataset.v));$('#goAdd').onclick=()=>show('add');
+
+/* ---------- library ---------- */
+function subjOf(l){return l.a?l.a.subject:(l.subjectHint&&l.subjectHint!=='Auto-detect'?l.subjectHint:'Not analysed')}
+function renderList(){
+  const q=$('#libq').value.trim().toLowerCase(),sf=$('#libsub').value;
+  const subs=[...new Set(lessons.map(subjOf))].sort();const sel=$('#libsub');const keep=sel.value;
+  sel.innerHTML='<option value="">All subjects</option>'+subs.map(s=>`<option ${s===keep?'selected':''}>${esc(s)}</option>`).join('');
+  const box=$('#list');box.innerHTML='';
+  const ls=lessons.filter(l=>(!sf||subjOf(l)===sf)&&(!q||JSON.stringify([l.title,l.a&&l.a.topic,l.source.text]).toLowerCase().includes(q))).sort((a,b)=>b.created-a.created);
+  if(!ls.length){box.innerHTML='<div class="empty">No topics yet. Tap <b>+ Add</b> to save your first newspaper extract or textbook page.</div>';return}
+  ls.forEach(l=>{const b=document.createElement('button');b.type='button';b.className='item'+(l.status!=='done'?' pending':'');b.setAttribute('aria-current',cur&&cur.id===l.id?'true':'false');
+    b.innerHTML=`<b>${esc(l.a?l.a.topic:(l.title||'Untitled topic'))}</b><span class="meta"><span class="chip ${l.status!=='done'?'gold':''}">${esc(subjOf(l))}</span>${l.sample?'<span class="chip gold">Example</span>':''}<span>${new Date(l.created).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span>${l.status!=='done'?'<span>· waiting for analysis</span>':''}</span>`;
+    b.onclick=()=>{cur=l;renderList();renderLesson();if(innerWidth<860)$('#lesson').scrollIntoView({behavior:'smooth'})};box.append(b)});
+}
+$('#libq').oninput=renderList;$('#libsub').onchange=renderList;
+
+function table(cols,rows,keys,te){
+  if(!rows||!rows.length)return'<p class="muted">None found in this material.</p>';
+  return `<div class="tbl"><table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${keys.map((k,i)=>`<td class="${i===0?'w':''} ${te&&te.includes(k)?'te':''}">${esc(r[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function sec(title,tag,html){return `<div class="sec"><h3>${esc(title)}<span>${esc(tag||'')}</span></h3><div class="sbody">${html}</div></div>`}
+function lessonHTML(l,forDoc){
+  const a=l.a;const parts=[];
+  parts.push(sec('Subject and topic','Overview',table(['Item','Details'],[{k:'Subject',v:a.subject+(a.subject2?' · '+a.subject2:'')},{k:'Topic',v:a.topic},{k:'Language of the material',v:a.language||''},{k:'Theme',v:a.theme}],['k','v'])));
+  parts.push(sec('Summary','In brief',`<p>${esc(a.summary)}</p>`));
+  parts.push(sec('Vocabulary','Meaning · synonyms · antonyms',table(['Word','Meaning','Telugu','Synonyms','Antonyms'],a.vocabulary,['word','meaning','telugu','synonyms','antonyms'],['telugu'])));
+  parts.push(sec('Key words of the topic','Terms to remember',table(['Term','Explanation','Telugu'],a.keyTerms,['term','explanation','telugu'],['telugu'])));
+  parts.push(sec('Idioms and phrases','From this material',table(['Idiom / phrase','Meaning','Telugu','Example'],a.idioms,['phrase','meaning','telugu','example'],['telugu'])));
+  if(a.translation&&a.translation.text)parts.push(sec('Translation','Into '+(a.translation.to||''),`<p class="${/telugu/i.test(a.translation.to||'')?'te':''}" style="white-space:pre-wrap">${esc(a.translation.text)}</p>`));
+  parts.push(sec('Questions and answers','Exam practice',table(['#','Question','Answer'],(a.questions||[]).map((q,i)=>({n:i+1,q:q.q+(q.type==='mcq'?'\n'+q.options.map((o,j)=>'ABCD'[j]+') '+o).join('   '):''),ans:q.type==='mcq'?('ABCD'[q.answer]+') '+q.options[q.answer]+(q.explanation?' — '+q.explanation:'')):q.answer})),['n','q','ans'])));
+  if(a.writing)parts.push(sec('Writing practice','Task with hints',`<p><b>Task:</b> ${esc(a.writing.task)}</p><div class="hint"><b>Hints</b><ol>${(a.writing.hints||[]).map(h=>`<li>${esc(h)}</li>`).join('')}</ol></div>${forDoc?`<p><b>Model answer</b></p><div class="model">${esc(a.writing.model)}</div>`:''}`));
+  if(a.report)parts.push(sec('Report writing','Task, format and hints',`<p><b>Task:</b> ${esc(a.report.task)}</p>${table(['Step','Report format'],(a.report.format||[]).map((f,i)=>({n:i+1,f})),['n','f'])}<div class="hint" style="margin-top:10px"><b>Hints</b><ol>${(a.report.hints||[]).map(h=>`<li>${esc(h)}</li>`).join('')}</ol></div>${forDoc?`<p><b>Model report</b></p><div class="model">${esc(a.report.model)}</div>`:''}`));
+  return parts.join('');
+}
+function renderLesson(){
+  const box=$('#lesson');
+  if(!cur){box.innerHTML='<div class="empty">Choose a topic on the left to see its tables, or add new material.</div>';return}
+  const l=cur;const src=l.source;
+  let h=`<div class="lhead"><div class="row"><span class="chip">${esc(subjOf(l))}</span>${l.a&&l.a.subject2?`<span class="chip">${esc(l.a.subject2)}</span>`:''}${l.sample?'<span class="chip gold">Example lesson</span>':''}</div><h1>${esc(l.a?l.a.topic:(l.title||'Untitled topic'))}</h1></div>`;
+  if(l.status!=='done'){
+    h+=`<div class="card stack"><h2>Waiting for analysis</h2><p class="muted" style="margin:0">${navigator.onLine?'You are online.':'You are offline. Analysis will be possible once the phone is online.'}</p>
+    <div class="row">${settings.provider!=='chat'?'<button class="btn pri" type="button" id="runA">Analyse now</button>':''}<button class="btn ${settings.provider==='chat'?'pri':'ghost'}" type="button" id="copyReq">Copy request</button></div>
+    <details ${settings.provider==='chat'?'open':''}><summary class="muted" style="cursor:pointer">Paste a reply from an AI chat app</summary><label class="f" style="margin-top:8px">Reply<textarea id="pasteR" placeholder="Paste the complete reply here"></textarea></label></details>
+    <div class="row"><button class="btn ok" type="button" id="impR">Make tables from reply</button><span class="muted" id="runMsg"></span></div></div>`;
+  }else{
+    h+=`<div class="row"><button class="btn pri" type="button" id="prac">Practise this topic</button><button class="btn" type="button" id="docx">Download as Word document</button><button class="btn ghost" type="button" id="redo">Analyse again</button><button class="btn danger" type="button" id="delL">Delete</button></div>`;
+    h+=lessonHTML(l,false);
+  }
+  h+=sec('Original material','Saved on this phone',`${src.link?`<p><a href="${esc(src.link)}" target="_blank" rel="noopener">${esc(src.link)}</a></p>`:''}${src.text?`<div class="orig">${esc(src.text)}</div>`:''}${(src.images||[]).length?`<div class="thumbs" style="margin-top:8px">${src.images.map(i=>`<img src="${i}" alt="Saved page photo">`).join('')}</div>`:''}`);
+  if(l.status!=='done')h+=`<div class="row"><button class="btn danger" type="button" id="delL">Delete</button></div>`;
+  box.innerHTML=h;
+  const on=(id,f)=>{const e=document.getElementById(id);if(e)e.onclick=f};
+  on('runA',()=>analyse(l));on('copyReq',()=>copyRequest(l));on('impR',()=>importReply(l));
+  on('prac',()=>{practiceTarget=l.id;show('practice')});on('docx',()=>exportDoc(l));on('redo',()=>{l.status='pending';renderLesson();renderList()});
+  on('delL',()=>delConfirm(l));
+}
+let delArm=null;
+async function delConfirm(l){const b=$('#delL');if(delArm!==l.id){delArm=l.id;b.textContent='Tap again to delete';setTimeout(()=>{if(delArm===l.id){delArm=null;if(b.isConnected)b.textContent='Delete'}},4000);return}
+  delArm=null;if(l.sample)await DB.set('sampleRemoved',true);await DB.del(l.id);lessons=lessons.filter(x=>x.id!==l.id);cur=null;renderList();renderLesson();toast('Topic deleted')}
+
+/* ---------- add ---------- */
+$('#aSub').innerHTML=SUBJECTS.map(s=>`<option>${s}</option>`).join('');
+function shrink(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const m=1600,sc=Math.min(1,m/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.82))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+async function addFiles(fs){for(const f of fs){if(!f.type.startsWith('image/'))continue;try{pendingImgs.push(await shrink(f))}catch(e){toast('Could not read '+f.name)}}paintThumbs()}
+function paintThumbs(){const t=$('#thumbs');t.innerHTML='';pendingImgs.forEach((src,i)=>{const w=document.createElement('div');w.style.position='relative';w.innerHTML=`<img src="${src}" alt="Page ${i+1}"><button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 8px" aria-label="Remove image">×</button>`;w.querySelector('button').onclick=()=>{pendingImgs.splice(i,1);paintThumbs()};t.append(w)})}
+$('#aFiles').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
+const drop=$('#drop');['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('on')}));drop.addEventListener('drop',e=>addFiles([...e.dataTransfer.files]));
+document.addEventListener('paste',e=>{if($('#v-add').hidden)return;const fs=[...(e.clipboardData||{}).files||[]];if(fs.length)addFiles(fs)});
+async function saveNew(andRun){
+  const text=$('#aText').value.trim(),link=$('#aLink').value.trim();
+  if(!text&&!pendingImgs.length&&!link){$('#aMsg').textContent='Add some text, a photo or a link first.';return}
+  const l={id:'t'+Date.now(),created:Date.now(),title:$('#aTitle').value.trim(),subjectHint:$('#aSub').value,source:{kind:'mixed',text,link,images:pendingImgs.slice()},status:'pending'};
+  await DB.put(l);lessons.push(l);cur=l;
+  $('#aTitle').value='';$('#aText').value='';$('#aLink').value='';pendingImgs=[];paintThumbs();$('#aMsg').textContent='';
+  show('library');renderLesson();toast('Saved on this phone');
+  if(andRun&&settings.provider!=='chat'&&navigator.onLine)analyse(l);
+}
+$('#aSave').onclick=()=>saveNew(true);$('#aLater').onclick=()=>saveNew(false);
+
+/* ---------- analysis ---------- */
+function buildPrompt(l){
+  return `You are a tutor for Indian competitive exams (APPSC Group 1 and Group 2, UPSC civil services, SSC). Study the material provided (text, photos or screenshots of newspapers, journals or textbooks; it may be in English or Telugu).
+${l.subjectHint&&l.subjectHint!=='Auto-detect'?'The student says the subject is: '+l.subjectHint+'.':'Identify the subject yourself.'}${l.title?'\nStudent\'s title: '+l.title:''}${l.source.link?'\nSource link (for reference): '+l.source.link:''}
+
+Reply with ONLY one JSON object, no other text, in exactly this shape:
+{
+ "subject": "one of Economics, Polity, History, Geography, Physics, Chemistry, Biology, Mathematics, English, Reasoning, Environment, Science & Technology, Current affairs, Telugu, Other",
+ "subject2": "a second related subject or empty string",
+ "topic": "short topic name",
+ "language": "English or Telugu",
+ "theme": "the central theme in one sentence",
+ "summary": "summary in 3 to 5 sentences in simple English",
+ "translation": {"to": "Telugu if the material is English, English if it is Telugu", "text": "faithful translation of the main material (up to about 250 words)"},
+ "vocabulary": [{"word":"", "meaning":"simple English meaning", "telugu":"Telugu meaning", "synonyms":"2 synonyms", "antonyms":"1-2 antonyms or empty"}],
+ "keyTerms": [{"term":"", "explanation":"one line", "telugu":"Telugu term"}],
+ "idioms": [{"phrase":"", "meaning":"", "telugu":"", "example":"one sentence"}],
+ "questions": [{"type":"mcq","q":"","options":["","","",""],"answer":0,"explanation":""}, {"type":"short","q":"","answer":"model answer in 2-4 sentences"}],
+ "writing": {"task":"a paragraph or essay task on this topic with word limit", "hints":["4 to 6 hints a weak writer can follow"], "model":"model answer"},
+ "report": {"task":"a report-writing task linked to this topic", "format":["the steps/parts of the report"], "hints":["3 to 5 hints"], "model":"model report"}
+}
+Rules: 8 to 12 vocabulary words chosen from the material that an exam aspirant may not know; 5 to 10 key terms; idioms and phrases found in or suited to the material (empty list if none fit); 10 questions: 5 multiple choice (include statement-based prelims style), 3 short answer and 2 Mains descriptive questions (10 or 15 marks, model answer of 120-200 words, type "short"), at Group 1/Group 2 level, answerable from the material plus basic subject knowledge. For mathematics or science, put formulas and units in keyTerms and include worked numerical questions. Telugu must be natural, correct Telugu script. Do not invent facts that are not in the material or standard textbooks.`;
+}
+function contentFor(l){const c=[];(l.source.images||[]).forEach(d=>{const m=d.match(/^data:(image\/\w+);base64,(.*)$/);if(m)c.push({type:'image',source:{type:'base64',media_type:m[1],data:m[2]}})});c.push({type:'text',text:buildPrompt(l)+(l.source.text?'\n\nMATERIAL:\n'+l.source.text:'\n\nThe material is in the attached images.')});return c}
+function parseReply(txt){
+  let s=String(txt||'').trim();s=s.replace(/^```(?:json)?/i,'').replace(/```\s*$/,'');
+  const i=s.indexOf('{'),j=s.lastIndexOf('}');if(i<0||j<i)throw new Error('No tables found in the reply. Copy Claude\'s whole reply, starting from {.');
+  const a=JSON.parse(s.slice(i,j+1));
+  if(!a.topic||!a.summary)throw new Error('The reply is missing the topic or summary.');
+  ['vocabulary','keyTerms','idioms','questions'].forEach(k=>{if(!Array.isArray(a[k]))a[k]=[]});
+  a.questions=a.questions.filter(q=>q&&q.q&&(q.type!=='mcq'||(Array.isArray(q.options)&&q.options.length>=2&&Number.isInteger(+q.answer)))).map(q=>q.type==='mcq'?Object.assign(q,{answer:+q.answer}):q);
+  return a;
+}
+async function finish(l,a){l.a=a;l.status='done';l.analysed=Date.now();await DB.put(l);renderList();if(cur&&cur.id===l.id)renderLesson();toast('Tables ready and saved offline')}
+async function geminiModel(){
+  if(settings.gmodel)return settings.gmodel;
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':settings.gkey}});
+  const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||'Key check failed');
+  const ms=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')&&/flash/i.test(m.name)&&!/(image|tts|audio|live|embedding|thinking-exp)/i.test(m.name));
+  const ver=n=>{const m=n.match(/gemini-(\d+(?:\.\d+)?)/);return m?parseFloat(m[1]):0};
+  ms.sort((a,b)=>ver(b.name)-ver(a.name)||(/lite/.test(a.name)-/lite/.test(b.name))||(/preview|exp/.test(a.name)-/preview|exp/.test(b.name)));
+  if(!ms.length)throw new Error('No Flash model is available for this key');
+  return ms[0].name;
+}
+async function callGemini(l){
+  const model=await geminiModel();const parts=[];
+  (l.source.images||[]).forEach(d=>{const m=d.match(/^data:(image\/\w+);base64,(.*)$/);if(m)parts.push({inline_data:{mime_type:m[1],data:m[2]}})});
+  parts.push({text:buildPrompt(l)+(l.source.text?'\n\nMATERIAL:\n'+l.source.text:'\n\nThe material is in the attached images.')});
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:16000,temperature:0.4}})});
+  const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||'Request failed ('+r.status+')');
+  return ((j.candidates||[])[0]||{content:{parts:[]}}).content.parts.map(p=>p.text||'').join('');
+}
+async function callClaude(l){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':settings.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:settings.model,max_tokens:8000,messages:[{role:'user',content:contentFor(l)}]})});
+  const j=await r.json();if(!r.ok)throw new Error(j&&j.error&&j.error.message?j.error.message:'Request failed ('+r.status+')');
+  return (j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+}
+async function analyse(l){
+  const msg=()=>document.getElementById('runMsg');
+  const p=settings.provider;
+  if((p==='gemini'&&!settings.gkey)||(p==='claude'&&!settings.key)){toast('Add your free Gemini key in Settings first');show('settings');return}
+  if(!navigator.onLine){toast('You are offline. It will wait until you are online.');return}
+  if(msg())msg().innerHTML='<span class="spin"></span> Analysing… this takes about a minute';
+  try{await finish(l,parseReply(p==='claude'?await callClaude(l):await callGemini(l)))}
+  catch(e){if(msg())msg().textContent='Could not analyse: '+e.message;}
+}
+async function copyRequest(l){
+  const t=buildPrompt(l)+(l.source.text?'\n\nMATERIAL:\n'+l.source.text:'\n\nThe material is in the photos I am attaching.');
+  try{await navigator.clipboard.writeText(t);toast((l.source.images||[]).length?'Copied. Paste it in your AI chat app and attach the photos too.':'Copied. Paste it into your AI chat app.')}
+  catch(e){const ta=document.getElementById('pasteR');ta.closest('details').open=true;ta.value=t;ta.select();toast('Select all and copy this request, then clear the box')}
+}
+async function importReply(l){try{await finish(l,parseReply(document.getElementById('pasteR').value))}catch(e){document.getElementById('runMsg').textContent=e.message}}
+
+/* ---------- export ---------- */
+function download(name,blob){const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
+function exportDoc(l){
+  const css='body{font-family:Calibri,"Noto Sans Telugu",sans-serif;font-size:12pt}h1{color:#1f6b52}h3{background:#e2efe9;color:#1f6b52;padding:6px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px;vertical-align:top}th{background:#f0f0f0}.hint{background:#fcf0d9;padding:8px}.model{background:#e2efe9;padding:8px;white-space:pre-wrap}';
+  const html=`<html><head><meta charset="utf-8"><style>${css}</style></head><body><h1>${esc(l.a.topic)}</h1><p>Subject: ${esc(l.a.subject)} · Saved ${new Date(l.created).toLocaleDateString('en-IN')}</p>${lessonHTML(l,true).replace(/<span>[^<]*<\/span><\/h3>/g,'</h3>')}</body></html>`;
+  download((l.a.topic||'topic').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-')+'.doc',new Blob(['﻿'+html],{type:'application/msword'}));
+  toast('Word document downloaded (opens in Word, Google Docs or WPS)');
+}
+
+/* ---------- practice ---------- */
+let practiceTarget=null,pmode='questions';
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function renderPractice(){
+  const box=$('#v-practice');const done=lessons.filter(l=>l.status==='done');
+  if(!done.length){box.innerHTML='<div class="empty">Analyse at least one topic to start practising.</div>';return}
+  if(!practiceTarget||!done.find(l=>l.id===practiceTarget))practiceTarget=done.sort((a,b)=>b.created-a.created)[0].id;
+  const l=done.find(x=>x.id===practiceTarget);
+  box.innerHTML=`<div class="row"><h1 style="margin-right:auto">Practice</h1></div>
+  <label class="f" style="max-width:520px">Topic<select id="pTopic">${done.map(x=>`<option value="${x.id}" ${x.id===l.id?'selected':''}>${esc(x.a.topic)} · ${esc(x.a.subject)}</option>`).join('')}</select></label>
+  <div class="seg" role="group" aria-label="Practice type">${[['questions','Questions'],['vocab','Word test (all topics)'],['writing','Writing practice'],['report','Report writing']].map(([k,t])=>`<button type="button" data-m="${k}" aria-pressed="${pmode===k}">${t}</button>`).join('')}</div>
+  <div class="card" id="pBody"></div>`;
+  $('#pTopic').onchange=e=>{practiceTarget=e.target.value;renderPractice()};
+  $$('#v-practice .seg button').forEach(b=>b.onclick=()=>{pmode=b.dataset.m;renderPractice()});
+  const body=$('#pBody');
+  if(pmode==='questions')practQuestions(body,l);
+  else if(pmode==='vocab')practVocab(body,done);
+  else practWriting(body,l,pmode==='report'?l.a.report:l.a.writing,pmode);
+}
+function mcqCard(q,i,onAns){
+  const c=document.createElement('div');c.className='qcard';c.innerHTML=`<div class="qq">${i}. ${esc(q.q)}</div>`;
+  const os=document.createElement('div');os.className='opts';
+  q.options.forEach((o,k)=>{const b=document.createElement('button');b.type='button';b.className='opt';b.innerHTML=`<span class="k">${'ABCD'[k]}</span><span>${esc(o)}</span>`;
+    b.onclick=()=>{if(c.dataset.a)return;c.dataset.a=1;const ok=k===q.answer;os.querySelectorAll('.opt').forEach((x,xi)=>{x.disabled=true;if(xi===q.answer)x.classList.add('ok')});if(!ok)b.classList.add('no');
+      const f=document.createElement('div');f.className='fb '+(ok?'ok':'no');f.innerHTML=`<b>${ok?'Correct.':'Answer: '+'ABCD'[q.answer]+'.'}</b> ${esc(q.explanation||'')}`;c.append(f);onAns&&onAns(ok)};os.append(b)});
+  c.append(os);return c;
+}
+function practQuestions(body,l){
+  const qs=shuf(l.a.questions||[]);let score=0,ans=0,mc=qs.filter(q=>q.type==='mcq').length;
+  body.innerHTML=`<div class="row" style="margin-bottom:6px"><h2 style="margin-right:auto">${esc(l.a.topic)}</h2><span class="count" id="sc">0 / ${mc} correct</span><button class="btn ghost" type="button" id="again">Shuffle again</button></div>`;
+  $('#again').onclick=()=>practQuestions(body,l);
+  qs.forEach((q,i)=>{
+    if(q.type==='mcq')body.append(mcqCard(q,i+1,ok=>{ans++;if(ok)score++;$('#sc').textContent=score+' / '+mc+' correct'}));
+    else{const c=document.createElement('div');c.className='qcard';c.innerHTML=`<div class="qq">${i+1}. ${esc(q.q)}</div><textarea style="min-height:90px" placeholder="Write your answer, then compare" aria-label="Your answer"></textarea><div class="row" style="margin-top:8px"><button class="btn" type="button">Show model answer</button></div>`;
+      c.querySelector('button').onclick=e=>{e.target.disabled=true;const m=document.createElement('div');m.className='model';m.style.marginTop='8px';m.textContent=q.answer;c.append(m)};body.append(c)}
+  });
+}
+function practVocab(body,done){
+  const pool=done.flatMap(l=>(l.a.vocabulary||[]).map(v=>Object.assign({topic:l.a.topic},v))).filter(v=>v.word&&v.meaning);
+  if(pool.length<4){body.innerHTML='<p class="muted">Analyse a few more topics to build a word test (needs at least 4 words).</p>';return}
+  const kinds=[
+    v=>({q:`Meaning of “${v.word}”`,a:v.meaning,f:x=>x.meaning}),
+    v=>v.telugu&&({q:`Telugu meaning of “${v.word}”`,a:v.telugu,f:x=>x.telugu}),
+    v=>v.synonyms&&({q:`A synonym of “${v.word}”`,a:v.synonyms.split(',')[0].trim(),f:x=>x.antonyms?x.antonyms.split(',')[0].trim():(x.synonyms||'').split(',')[0].trim()}),
+    v=>v.antonyms&&({q:`An antonym of “${v.word}”`,a:v.antonyms.split(',')[0].trim(),f:x=>(x.synonyms||'').split(',')[0].trim()})];
+  const qs=[];const used=new Set();let guard=0;
+  while(qs.length<10&&guard++<300){const v=pool[Math.floor(Math.random()*pool.length)];const k=kinds[Math.floor(Math.random()*kinds.length)](v);if(!k||!k.a||used.has(k.q))continue;
+    const wrong=shuf([...new Set(pool.filter(x=>x.word!==v.word).map(k.f).filter(x=>x&&x!==k.a))]).slice(0,3);if(wrong.length<2)continue;used.add(k.q);
+    const opts=shuf([k.a,...wrong]);qs.push({q:k.q,options:opts,answer:opts.indexOf(k.a),explanation:`${v.word}: ${v.meaning}${v.telugu?' ('+v.telugu+')':''}. From “${v.topic}”.`})}
+  let score=0;body.innerHTML=`<div class="row" style="margin-bottom:6px"><h2 style="margin-right:auto">Word test</h2><span class="count" id="sc">0 / ${qs.length}</span><button class="btn ghost" type="button" id="again">New words</button></div><p class="muted" style="margin:0">Mixed from all ${done.length} saved topic${done.length>1?'s':''}: meanings, Telugu, synonyms and antonyms.</p>`;
+  $('#again').onclick=()=>practVocab(body,done);
+  qs.forEach((q,i)=>body.append(mcqCard(q,i+1,ok=>{if(ok)score++;$('#sc').textContent=score+' / '+qs.length})));
+}
+async function practWriting(body,l,w,kind){
+  if(!w){body.innerHTML='<p class="muted">This topic has no task of this kind. Try “Analyse again”.</p>';return}
+  const key='draft.'+kind+'.'+l.id;const saved=(await DB.get(key))||{text:'',history:[]};
+  body.innerHTML=`<h2>${kind==='report'?'Report writing':'Writing practice'}</h2><p style="margin:8px 0"><b>Task:</b> ${esc(w.task)}</p>
+  ${w.format?`<div class="tbl" style="margin-bottom:10px">${table(['Step','Report format'],w.format.map((f,i)=>({n:i+1,f})),['n','f'])}</div>`:''}
+  <div class="row" style="margin-bottom:8px"><button class="btn ghost" type="button" id="hBtn">Show hint 1</button><span class="count" id="hc"></span></div><div class="hint" id="hBox" hidden><ol id="hList"></ol></div>
+  <textarea id="wText" style="min-height:240px;margin-top:10px" placeholder="Write here. Your draft is saved on this phone as you type." aria-label="Your writing">${esc(saved.text)}</textarea>
+  <div class="row" style="margin-top:8px"><span class="count" id="wc"></span><span style="margin-left:auto"></span><span id="micWrap" class="row" style="gap:6px"><select id="micLang" aria-label="Voice typing language" style="width:auto"><option value="en-IN">English</option><option value="te-IN">తెలుగు</option></select><button class="btn ghost mic" type="button" id="micBtn">🎤 Speak</button></span></div>
+  <div class="row" style="margin-top:8px"><button class="btn" type="button" id="wSave">Save attempt</button><button class="btn ok" type="button" id="evBtn">Check with AI</button><button class="btn pri" type="button" id="mBtn">Compare with model</button><span class="muted" id="evMsg"></span></div>
+  <div id="evBox" class="card" hidden style="margin-top:12px"></div>
+  <div id="mBox" hidden style="margin-top:12px"><div class="lbl" style="margin-bottom:6px">Model answer</div><div class="model">${esc(w.model)}</div>
+  <div class="hint" style="margin-top:10px"><b>Check your answer</b><ol><li>Did you answer the exact task and keep near the word limit?</li><li>Does each paragraph have one clear point?</li><li>Did you use at least three words from the topic's vocabulary?</li><li>Did you end with a clear conclusion?</li></ol></div></div>
+  <div id="hist" style="margin-top:12px"></div>`;
+  const hints=w.hints||[];let shown=0;
+  const paintH=()=>{$('#hList').innerHTML=hints.slice(0,shown).map(h=>`<li>${esc(h)}</li>`).join('');$('#hBox').hidden=!shown;$('#hBtn').textContent=shown<hints.length?'Show hint '+(shown+1):'All hints shown';$('#hBtn').disabled=shown>=hints.length;$('#hc').textContent=hints.length?shown+' of '+hints.length+' hints':''};paintH();
+  $('#hBtn').onclick=()=>{shown++;paintH()};
+  const wc=()=>{const n=($('#wText').value.trim().match(/\S+/g)||[]).length;$('#wc').textContent=n+' words'};wc();
+  let t;$('#wText').oninput=()=>{wc();clearTimeout(t);t=setTimeout(()=>{saved.text=$('#wText').value;DB.set(key,saved)},500)};
+  setupMic($('#wText'),()=>{wc();saved.text=$('#wText').value;DB.set(key,saved)});
+  $('#evBtn').onclick=()=>evaluate(w,$('#wText').value.trim(),kind);
+  $('#mBtn').onclick=()=>{$('#mBox').hidden=false;$('#mBox').scrollIntoView({behavior:'smooth',block:'nearest'})};
+  const paintHist=()=>{$('#hist').innerHTML=saved.history.length?`<div class="lbl" style="margin-bottom:6px">Saved attempts</div>`+saved.history.slice().reverse().map(h=>`<details style="margin-bottom:6px"><summary>${new Date(h.at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})} · ${h.words} words</summary><div class="orig" style="margin-top:6px">${esc(h.text)}</div></details>`).join(''):''};paintHist();
+  $('#wSave').onclick=async()=>{const tx=$('#wText').value.trim();if(!tx){toast('Write something first');return}saved.history.push({at:Date.now(),text:tx,words:(tx.match(/\S+/g)||[]).length});saved.text='';$('#wText').value='';wc();await DB.set(key,saved);paintHist();toast('Attempt saved')};
+}
+
+/* ---------- voice typing ---------- */
+function setupMic(ta,after){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;const wrap=$('#micWrap');
+  if(!SR){wrap.hidden=true;return}
+  let rec=null,on=false;const btn=$('#micBtn');
+  btn.onclick=()=>{
+    if(on){rec&&rec.stop();return}
+    rec=new SR();rec.lang=$('#micLang').value;rec.continuous=true;rec.interimResults=false;
+    rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const t=e.results[i][0].transcript.trim();ta.value=(ta.value&&!/\s$/.test(ta.value)?ta.value+' ':ta.value)+t;after()}};
+    rec.onend=()=>{on=false;btn.classList.remove('on');btn.textContent='🎤 Speak'};
+    rec.onerror=e=>{toast(e.error==='not-allowed'?'Allow microphone access for this app in Chrome settings':'Voice typing stopped: '+e.error)};
+    try{rec.start();on=true;btn.classList.add('on');btn.textContent='■ Stop'}catch(e){toast('Voice typing could not start')}
+  };
+}
+/* ---------- AI check of writing ---------- */
+async function askAI(prompt){
+  if(settings.provider==='claude'){const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':settings.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:settings.model,max_tokens:3000,messages:[{role:'user',content:prompt}]})});const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||'Request failed');return j.content.filter(c=>c.type==='text').map(c=>c.text).join('')}
+  const model=await geminiModel();const r=await fetch('https://generativelanguage.googleapis.com/v1beta/'+model+':generateContent',{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':settings.gkey},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:4000,temperature:0.3}})});
+  const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||'Request failed');return((j.candidates||[])[0]||{content:{parts:[]}}).content.parts.map(p=>p.text||'').join('');
+}
+async function evaluate(w,text,kind){
+  const m=$('#evMsg'),box=$('#evBox');
+  if(!text){m.textContent='Write or speak your answer first.';return}
+  if(settings.provider==='chat'||(settings.provider==='gemini'&&!settings.gkey)||(settings.provider==='claude'&&!settings.key)){m.textContent='Add your Gemini key in Settings to use this.';return}
+  if(!navigator.onLine){m.textContent='Needs internet. Your draft is saved; check it later.';return}
+  m.innerHTML='<span class="spin"></span> Checking…';
+  const prompt=`You are an examiner for APPSC Group 1/Group 2 and UPSC Mains English and essay papers. Evaluate the student's ${kind==='report'?'report':'answer'} for this task.
+TASK: ${w.task}
+STUDENT ANSWER:
+${text}
+Reply with ONLY JSON: {"score": number from 0 to 10, "verdict": "one sentence", "strengths": ["2-3 points"], "improve": ["3-5 specific, practical points"], "corrected": "the student's answer rewritten with grammar and expression corrected, keeping their ideas", "errors": [{"wrong":"exact phrase from the answer","right":"correction","why":"short reason"}]}. Be honest and encouraging; judge content, structure, grammar and the word limit.`;
+  try{const s=await askAI(prompt);const i=s.indexOf('{'),j=s.lastIndexOf('}');const e=JSON.parse(s.slice(i,j+1));
+    box.hidden=false;m.textContent='';
+    box.innerHTML=`<div class="row"><div class="score">${esc(e.score)}/10</div><div style="flex:1;min-width:200px">${esc(e.verdict||'')}</div></div>
+    <div class="grid2" style="margin-top:10px"><div><div class="lbl">Strengths</div><ul style="margin:6px 0;padding-left:1.2em">${(e.strengths||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div><div class="lbl">To improve</div><ul style="margin:6px 0;padding-left:1.2em">${(e.improve||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
+    ${(e.errors||[]).length?`<div class="lbl" style="margin-top:8px">Language corrections</div>${table(['You wrote','Better','Why'],e.errors,['wrong','right','why'])}`:''}
+    ${e.corrected?`<div class="lbl" style="margin-top:10px">Your answer, corrected</div><div class="model" style="margin-top:6px">${esc(e.corrected)}</div>`:''}`;
+  }catch(err){m.textContent='Could not check: '+err.message}
+}
+/* ---------- study timer ---------- */
+const TM={run:false,start:0,acc:0,today:{}};
+const dayKey=()=>new Date().toISOString().slice(0,10);
+const fmt=(ms,full)=>{const s=Math.floor(ms/1000),h=Math.floor(s/3600),mi=Math.floor(s%3600/60),se=s%60;const p=n=>String(n).padStart(2,'0');return full?p(h)+':'+p(mi)+':'+p(se):(h?h+':'+p(mi):p(mi))+':'+p(se)};
+const tmNow=()=>TM.acc+(TM.run?Date.now()-TM.start:0);
+function tmPaint(){$('#tmBtn').textContent='⏱ '+fmt(tmNow());$('#tmBig').textContent=fmt(tmNow(),true);$('#tmGo').textContent=TM.run?'Pause':'Start';const t=(TM.today[dayKey()]||0)+(TM.run?Date.now()-TM.start:0);$('#tmToday').textContent='Studied today: '+Math.round(t/60000)+' min'}
+async function tmSave(){await DB.set('timer',{run:TM.run,start:TM.start,acc:TM.acc,today:TM.today})}
+function tmStop(){if(!TM.run)return;const d=Date.now()-TM.start;TM.acc+=d;TM.today[dayKey()]=(TM.today[dayKey()]||0)+d;TM.run=false}
+$('#tmBtn').onclick=()=>{$('#tmPop').hidden=!$('#tmPop').hidden;tmPaint()};
+document.addEventListener('click',e=>{if(!$('#tmPop').hidden&&!e.target.closest('#tmPop,#tmBtn'))$('#tmPop').hidden=true});
+$('#tmGo').onclick=()=>{if(TM.run)tmStop();else{TM.run=true;TM.start=Date.now()}tmSave();tmPaint()};
+$('#tmReset').onclick=()=>{tmStop();TM.acc=0;tmSave();tmPaint()};
+setInterval(()=>{if(TM.run)tmPaint()},1000);
+/* ---------- theme ---------- */
+function applyTheme(t){if(t)document.documentElement.setAttribute('data-theme',t);else document.documentElement.removeAttribute('data-theme');$$('[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===(t||'')))}
+$$('[data-t]').forEach(b=>b.onclick=async()=>{settings.theme=b.dataset.t;applyTheme(settings.theme);await DB.set('settings',settings)});
+
+/* ---------- settings, backup ---------- */
+function paintMode(){$$('[data-p]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===settings.provider));$$('[data-box]').forEach(x=>x.hidden=x.dataset.box!==settings.provider)}
+$$('[data-p]').forEach(b=>b.onclick=async()=>{settings.provider=b.dataset.p;await DB.set('settings',settings);paintMode();if(cur)renderLesson()});
+$('#sSave').onclick=async()=>{settings.key=$('#sKey').value.trim();settings.model=$('#sModel').value;await DB.set('settings',settings);$('#sMsg').textContent='Saved on this phone.'};
+$('#gSave').onclick=async()=>{settings.gkey=$('#gKey').value.trim();settings.gmodel=$('#gModel').value;await DB.set('settings',settings);
+  if(!settings.gkey){$('#gMsg').textContent='Paste your key first.';return}
+  if(!navigator.onLine){$('#gMsg').textContent='Saved. Connect to the internet to test it.';return}
+  $('#gMsg').innerHTML='<span class="spin"></span> Checking key…';
+  try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':settings.gkey}});const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||'check failed');
+    const ms=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')&&/gemini/i.test(m.name)).map(m=>m.name);
+    const sel=$('#gModel');sel.innerHTML='<option value="">Pick automatically (newest Flash model)</option>'+ms.map(m=>`<option value="${esc(m)}" ${m===settings.gmodel?'selected':''}>${esc(m.replace('models/',''))}</option>`).join('');
+    const auto=await geminiModel();$('#gMsg').textContent='Key works. Using '+auto.replace('models/','')+'.'}
+  catch(e){$('#gMsg').textContent='Key did not work: '+e.message}};
+$('#bk').onclick=async()=>{const drafts={};for(const l of lessons)for(const k of ['writing','report']){const d=await DB.get('draft.'+k+'.'+l.id);if(d)drafts['draft.'+k+'.'+l.id]=d}
+  download('topic-lab-backup-'+new Date().toISOString().slice(0,10)+'.json',new Blob([JSON.stringify({app:'topiclab',version:1,at:Date.now(),lessons:lessons.filter(l=>!l.sample),drafts})],{type:'application/json'}));$('#bkMsg').textContent='Backup file downloaded.'};
+$('#rs').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='topiclab')throw new Error('not a Topic Lab backup');let n=0;for(const l of d.lessons||[]){await DB.put(l);if(!lessons.find(x=>x.id===l.id)){lessons.push(l);n++}}for(const k in d.drafts||{})await DB.set(k,d.drafts[k]);$('#bkMsg').textContent='Restored '+n+' topics.';renderList()}catch(err){$('#bkMsg').textContent='Could not restore: '+err.message}};
+
+/* ---------- start ---------- */
+(async function(){
+  await DB.open();
+  try{if(navigator.storage&&navigator.storage.persist){const p=await navigator.storage.persist();$('#persist').textContent=p?'This phone has agreed to keep your data permanently.':'The browser may clear data if storage runs low, so keep regular backups.'}}catch(e){}
+  const s=await DB.get('settings');if(s)settings=Object.assign(settings,s);if(s&&s.mode&&!s.provider)settings.provider=s.mode==='chat'?'chat':'claude';$('#sKey').value=settings.key||'';$('#sModel').value=settings.model;$('#gKey').value=settings.gkey||'';if(settings.gmodel)$('#gModel').innerHTML+=`<option value="${esc(settings.gmodel)}" selected>${esc(settings.gmodel.replace('models/',''))}</option>`;paintMode();applyTheme(settings.theme||'');
+  const tm=await DB.get('timer');if(tm)Object.assign(TM,tm);tmPaint();
+  lessons=await DB.all();
+  if(!lessons.length&&!(await DB.get('sampleRemoved'))){lessons=[SAMPLE];await DB.put(SAMPLE)}
+  cur=lessons.sort((a,b)=>b.created-a.created)[0]||null;
+  show('library');renderLesson();
+  if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude/.test(location.hostname)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+})();
+})();
+</script>
+
+</body>
+</html>
