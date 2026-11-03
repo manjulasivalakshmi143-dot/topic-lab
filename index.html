@@ -213,14 +213,7 @@ html.phone .list{max-height:none}
   <section id="v-economy" hidden class="stack">
     <div class="row"><div style="margin-right:auto"><h1>Indian economy, latest</h1><div class="muted" id="ecWhen">Not updated yet</div></div>
       <button class="btn pri" type="button" id="ecGo">Update now</button></div>
-    <p class="muted" id="ecMsg" style="margin:0">Uses your Gemini key (or Claude API key) with web search to collect the newest RBI, CBDT, CBIC, GDP, inflation, jobs and Budget figures. Everything is saved on this phone, so you can read it offline. It updates by itself once a day when the app opens online.</p>
-    <details class="card" id="ecChat"><summary style="cursor:pointer;font-weight:700">Use the Claude app instead (your Claude subscription)</summary>
-      <div class="stack" style="margin-top:10px">
-        <p class="muted" style="margin:0">1. Tap Copy request. 2. Open the Claude app, start a new chat, paste and send (keep web search on). 3. When Claude finishes, copy its whole reply, paste it below and tap Save reply.</p>
-        <div class="row"><button class="btn" type="button" id="ecCopy">Copy request</button></div>
-        <label class="f">Claude's reply<textarea id="ecPaste" placeholder="Paste Claude's whole reply here"></textarea></label>
-        <div class="row"><button class="btn ok" type="button" id="ecSave">Save reply</button><span class="muted" id="ecPMsg"></span></div>
-      </div></details>
+    <p class="muted" id="ecMsg" style="margin:0">Uses your free Gemini key with Google Search to collect the newest RBI, CBDT, CBIC, GDP, inflation, jobs and Budget figures. Everything is saved on this phone, so you can read it offline. It updates by itself once a day when the app opens online.</p>
     <div id="ecBox" class="stack"></div>
   </section>
 
@@ -761,7 +754,7 @@ function ecParse(t){const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<0)thro
 let EC=null,ecBusy=false;
 function ecRender(){
   const box=$('#ecBox');if(!box)return;
-  if(!EC||!EC.groups){box.innerHTML=`<div class="empty">${ecProvider()?'Tap Update now to collect the latest economy data.':'Add your free Gemini key in Settings, or use the Claude app option above.'}</div>`;$('#ecWhen').textContent='Not updated yet';return}
+  if(!EC||!EC.groups){box.innerHTML=`<div class="empty">${ecProvider()?'Tap Update now to collect the latest economy data.':'Add your free Gemini key in Settings, then tap Update now.'}</div>`;$('#ecWhen').textContent='Not updated yet';return}
   $('#ecWhen').textContent=EC.at?'Last updated '+new Date(EC.at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})+(navigator.onLine?'':' · reading offline'):'Not updated yet';
   const st=EC.status||{};
   box.innerHTML=EC_GROUPS.map(g=>{const d=EC.groups[g.id],sx=st[g.id];
@@ -777,24 +770,17 @@ function ecRender(){
     `<p class="muted" style="font-size:14px;margin:0">Figures are collected automatically from web search. Before quoting a number in an exam answer, check it on the official site in Sources.</p>`;
   $$('[data-ecstudy]').forEach(b=>b.onclick=()=>ecStudy(b.dataset.ecstudy));
 }
-async function claudeSearch(prompt){
-  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':settings.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:settings.model,max_tokens:6000,tools:[{type:'web_search_20250305',name:'web_search',max_uses:6}],messages:[{role:'user',content:prompt.replace('Use Google Search','Use web search')}]})});
-  const j=await r.json();if(!r.ok)throw new Error(j&&j.error&&j.error.message?j.error.message:'Request failed ('+r.status+')');
-  const txt=(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');const seen=new Set(),sources=[];
-  (j.content||[]).forEach(c=>(c.type==='web_search_tool_result'&&Array.isArray(c.content)?c.content:[]).forEach(w=>{if(w.url&&!seen.has(w.url)){seen.add(w.url);sources.push({title:w.title||w.url,uri:w.url})}}));
-  return{txt,sources};
-}
-function ecProvider(){return settings.provider==='claude'&&settings.key?'claude':settings.gkey?'gemini':''}
+function ecProvider(){return settings.gkey?'gemini':''}
 async function ecUpdate(auto){
   if(ecBusy)return;const msg=$('#ecMsg');const pv=ecProvider();
-  if(!pv){if(!auto){toast('Add your Gemini or Claude API key in Settings, or use the Claude app below');$('#ecChat').open=true}return}
+  if(!pv){if(!auto){toast('Add your free Gemini key in Settings first');show('settings')}return}
   if(!navigator.onLine){if(!auto)toast('You are offline. Showing the saved data.');return}
   ecBusy=true;$('#ecGo').disabled=true;
   const today=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
   EC=EC||{groups:{}};EC.status={};EC_GROUPS.forEach(g=>EC.status[g.id]='busy');ecRender();
-  const t0=Date.now(),iv=setInterval(()=>{msg.innerHTML=`<span class="spin"></span> Searching all 4 parts with ${pv==='claude'?'Claude':'Gemini'}… ${Math.round((Date.now()-t0)/1000)} s`},1000);
+  const t0=Date.now(),iv=setInterval(()=>{msg.innerHTML=`<span class="spin"></span> Searching all 4 parts with Gemini… ${Math.round((Date.now()-t0)/1000)} s`},1000);
   const one=async g=>{
-    try{const r=pv==='claude'?await claudeSearch(ecPrompt(g,today)):await geminiGenerate([{text:ecPrompt(g,today)}],6000,0.2,null,{search:true,timeout:120000});
+    try{const r=await geminiGenerate([{text:ecPrompt(g,today)}],6000,0.2,null,{search:true,timeout:120000});
       const d=ecParse(r.txt);if(!(d.items||[]).length)throw new Error('No figures found');d.sources=r.sources;d.at=Date.now();
       const old=EC.groups[g.id];if(old)(EC.prev=EC.prev||{})[g.id]=old;EC.groups[g.id]=d;EC.at=Date.now();delete EC.status[g.id];return true}
     catch(e){EC.status[g.id]=e.message||'failed';return false}
@@ -802,23 +788,9 @@ async function ecUpdate(auto){
   };
   const res=[];for(let i=0;i<EC_GROUPS.length;i+=2)res.push(...await Promise.all(EC_GROUPS.slice(i,i+2).map(one)));
   clearInterval(iv);ecBusy=false;$('#ecGo').disabled=false;const ok=res.filter(Boolean).length;
-  msg.textContent=ok===EC_GROUPS.length?'Updated. Saved on this phone for offline reading.':ok?`Updated ${ok} of ${EC_GROUPS.length} parts. Tap Update now again later for the rest, or use the Claude app below.`:'Could not update right now. The reason is shown in each part. Try again later, or use the Claude app below.';
-  if(!ok&&!auto)$('#ecChat').open=true;
+  msg.textContent=ok===EC_GROUPS.length?'Updated. Saved on this phone for offline reading.':ok?`Updated ${ok} of ${EC_GROUPS.length} parts. Tap Update now again later for the rest.`:'Could not update right now. The reason is shown in each part. Try again later.';
   if(ok&&!auto)toast('Economy data updated');
 }
-/* Claude app route: one request covering all four parts */
-function ecChatPrompt(){const today=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
-  return `Today is ${today}. Search the web (prefer rbi.org.in, mospi.gov.in, pib.gov.in, incometaxindia.gov.in, cbic.gov.in, indiabudget.gov.in) and collect the very latest released Indian economy figures for my Group 1/2 and civil services study app.
-${EC_GROUPS.map(g=>`PART "${g.id}" (${g.name}): ${g.ask}`).join('\n')}
-Only give numbers you actually found; never guess. Reply with ONLY one JSON object, no other text, shaped like:
-{${EC_GROUPS.map(g=>`"${g.id}":{"items":[{"name":"","value":"","period":"","released":"","source":"","change":"","exam":"why it matters for exams"}],"updates":[{"title":"","date":"","detail":""}],"terms":[{"term":"","meaning":""}],"sources":[{"title":"","uri":"https://..."}]}`).join(',')}}
-Give 6 to 12 items per part, up to 4 updates and 4 terms per part. Plain simple English.`}
-$('#ecCopy').onclick=async()=>{const t=ecChatPrompt();try{await navigator.clipboard.writeText(t);toast('Copied. Paste it in the Claude app.')}catch(e){$('#ecPaste').value=t;$('#ecPaste').select();toast('Select all and copy this, then clear the box')}};
-$('#ecSave').onclick=async()=>{const m=$('#ecPMsg');
-  try{const all=ecParse($('#ecPaste').value);let n=0;EC=EC||{groups:{}};EC.status=EC.status||{};
-    EC_GROUPS.forEach(g=>{const d=all[g.id];if(d&&(d.items||[]).length){d.at=Date.now();d.sources=(d.sources||[]).filter(x=>x&&x.uri);const old=EC.groups[g.id];if(old)(EC.prev=EC.prev||{})[g.id]=old;EC.groups[g.id]=d;delete EC.status[g.id];n++}});
-    if(!n)throw new Error('No figures found in the reply');EC.at=Date.now();await DB.set('econ',EC);$('#ecPaste').value='';m.textContent=`Saved ${n} parts.`;$('#ecChat').open=false;ecRender();toast('Economy data saved')}
-  catch(e){m.textContent='Could not read it: '+e.message+'. Copy the whole reply, starting from {.'}};
 async function ecStudy(id){
   const g=EC_GROUPS.find(x=>x.id===id),d=EC.groups[id];
   const text=[g.name+' — latest data ('+new Date(d.at).toLocaleDateString('en-IN')+')',...(d.items||[]).map(i=>`${i.name}: ${i.value} (${i.period||''}${i.released?', released '+i.released:''}${i.source?', '+i.source:''})${i.change?'. Change: '+i.change:''}`),...(d.updates||[]).map(u=>`${u.title} (${u.date||''}): ${u.detail||''}`),...(d.terms||[]).map(t=>`${t.term}: ${t.meaning}`)].join('\n');
